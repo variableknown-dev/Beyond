@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Local data
+data/*.db
+
+# Logs
+logs/*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# ComfyUI
+integrations/image_generation/ComfyUI/
+
+# Ollama local models
+ollama/models/
+.git_backup/
+.pytest_cache/
+*.log

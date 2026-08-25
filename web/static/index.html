@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Aarya — AI Assistant</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-mark">A</div>
+
+            <div>
+                <div class="brand-name">Aarya</div>
+                <div class="brand-subtitle">AI Assistant</div>
+            </div>
+        </div>
+
+        <button
+            id="new-chat"
+            class="new-chat"
+        >
+            <span>＋</span>
+            New chat
+        </button>
+
+        <div class="sidebar-section">
+
+            <div class="sidebar-label">
+                AARYA
+            </div>
+
+            <div class="sidebar-info">
+                <span class="online-dot"></span>
+                Online
+            </div>
+
+        </div>
+
+        <div class="sidebar-footer">
+            Powered by Gemini
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+        <!-- HEADER -->
+
+        <header class="header">
+
+            <div class="header-left">
+
+                <button
+                    id="sidebar-toggle"
+                    class="menu-button"
+                    aria-label="Open menu"
+                >
+                    ☰
+                </button>
+
+                <div>
+
+                    <div class="header-title">
+                        Aarya
+                    </div>
+
+                    <div class="header-status">
+                        <span class="online-dot"></span>
+                        Online
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- CHAT -->
+
+        <section
+            id="chat"
+            class="chat"
+        >
+
+            <!-- WELCOME -->
+
+            <div
+                id="welcome"
+                class="welcome"
+            >
+
+                <div class="welcome-icon">
+                    A
+                </div>
+
+                <h1>
+                    Hello, I'm Aarya.
+                </h1>
+
+                <p>
+                    Your personal AI assistant.
+                    What can I help you with?
+                </p>
+
+                <div class="suggestions">
+
+                    <button class="suggestion">
+                        Explain something to me
+                    </button>
+
+                    <button class="suggestion">
+                        Help me solve a problem
+                    </button>
+
+                    <button class="suggestion">
+                        Tell me something interesting
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- INPUT -->
+
+        <div class="composer-wrapper">
+
+            <form
+                id="chat-form"
+                class="composer"
+            >
+
+                <textarea
+                    id="message"
+                    rows="1"
+                    placeholder="Message Aarya..."
+                    autocomplete="off"
+                ></textarea>
+
+                <button
+                    id="send-button"
+                    type="submit"
+                    aria-label="Send message"
+                >
+                    ↑
+                </button>
+
+            </form>
+
+            <div class="composer-note">
+                Aarya can make mistakes. Check important information.
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script src="/static/app.js"></script>
+
+</body>
+
+</html>
