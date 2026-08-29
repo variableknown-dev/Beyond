@@ -1,4 +1,5 @@
 from pathlib import Path
+import traceback
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -10,6 +11,10 @@ from core.aarya import Aarya
 from models.gemini_provider import GeminiProvider
 from web.platform import WebPlatform
 
+
+# =========================================================
+# ENVIRONMENT
+# =========================================================
 
 load_dotenv()
 
@@ -100,13 +105,34 @@ async def chat(request: ChatRequest):
             response=""
         )
 
-    response = aarya.chat(
-        message
-    )
+    try:
 
-    return ChatResponse(
-        response=response
-    )
+        response = aarya.chat(
+            message
+        )
+
+        return ChatResponse(
+            response=response
+        )
+
+    except Exception as error:
+
+        print()
+        print("========================================")
+        print("AARYA NORMAL CHAT ERROR")
+        print("========================================")
+
+        traceback.print_exc()
+
+        print("========================================")
+        print()
+
+        return ChatResponse(
+            response=(
+                "Sorry, I ran into an error "
+                "while generating that response."
+            )
+        )
 
 
 # =========================================================
@@ -141,9 +167,15 @@ async def chat_stream(request: ChatRequest):
 
         except Exception as error:
 
-            print(
-                f"Aarya streaming error: {error}"
-            )
+            print()
+            print("========================================")
+            print("AARYA STREAMING CHAT ERROR")
+            print("========================================")
+
+            traceback.print_exc()
+
+            print("========================================")
+            print()
 
             yield (
                 "\n\nSorry, I ran into "
