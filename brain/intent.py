@@ -1,6 +1,3 @@
-from ollama import chat
-
-
 INTENTS = [
     "chat",
     "web",
@@ -14,11 +11,11 @@ INTENTS = [
 SYSTEM_PROMPT = f"""
 You are an intent classifier for an AI desktop assistant.
 
-Your job is to classify the user's request into EXACTLY ONE of these intents:
+Classify the user's request into EXACTLY ONE intent.
+
+Available intents:
 
 {", ".join(INTENTS)}
-
-Rules:
 
 chat
 - General conversation
@@ -57,17 +54,22 @@ files or folders.
 
 Reply with ONLY the intent.
 
-Do not explain.
-Do not use punctuation.
-Do not use markdown.
+No explanation.
+No punctuation.
+No markdown.
 """
 
 
-def classify_intent(user_input):
+def classify_intent(
+    user_input,
+    model_provider,
+):
+    """
+    Classify a request using the active model provider.
+    """
 
-    response = chat(
-        model="qwen3:8b",
-        messages=[
+    response = model_provider.chat(
+        [
             {
                 "role": "system",
                 "content": SYSTEM_PROMPT,
@@ -76,12 +78,13 @@ def classify_intent(user_input):
                 "role": "user",
                 "content": user_input,
             },
-        ],
+        ]
     )
 
-    intent = response["message"]["content"].strip().lower()
+    intent = response.strip().lower()
 
     if intent not in INTENTS:
+
         return "chat"
 
     return intent

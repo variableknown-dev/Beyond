@@ -1,23 +1,32 @@
+from models.ollama_provider import OllamaProvider
+
+
 # =========================================================
-# MODEL CHAT HELPERS
+# DEFAULT LOCAL MODEL
+# =========================================================
+
+DEFAULT_MODEL = OllamaProvider(
+    model="qwen3:8b"
+)
+
+
+# =========================================================
+# NORMAL CHAT
 # =========================================================
 
 def ask_aarya(
     messages,
-    model_provider,
+    model_provider=None,
 ):
     """
-    Send a conversation to the selected model provider.
+    Send messages to the selected model provider.
 
-    A model provider must be explicitly supplied.
-    This prevents the hosted version of Aarya from
-    accidentally trying to use local Ollama.
+    If no provider is supplied, use local Ollama.
     """
 
     if model_provider is None:
-        raise RuntimeError(
-            "Aarya requires a model provider."
-        )
+
+        model_provider = DEFAULT_MODEL
 
     return model_provider.chat(
         messages
@@ -30,28 +39,39 @@ def ask_aarya(
 
 def stream_aarya(
     messages,
-    model_provider,
+    model_provider=None,
 ):
     """
-    Stream a conversation from the selected model provider.
+    Stream messages from the selected model provider.
     """
 
     if model_provider is None:
-        raise RuntimeError(
-            "Aarya requires a model provider."
-        )
 
-    if not hasattr(
+        model_provider = DEFAULT_MODEL
+
+    # ---------------------------------------------------------
+    # Provider supports streaming
+    # ---------------------------------------------------------
+
+    if hasattr(
         model_provider,
         "chat_stream",
     ):
 
-        yield model_provider.chat(
+        yield from model_provider.chat_stream(
             messages
         )
 
         return
 
-    yield from model_provider.chat_stream(
+    # ---------------------------------------------------------
+    # Provider does not support streaming
+    # ---------------------------------------------------------
+
+    response = model_provider.chat(
         messages
     )
+
+    if response:
+
+        yield response

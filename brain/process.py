@@ -1,7 +1,15 @@
 from brain.planner import create_plan
 from brain.executor import execute_plan
-from brain.chat import ask_aarya, stream_aarya
-from brain.context import add_message, get_messages
+
+from brain.chat import (
+    ask_aarya,
+    stream_aarya,
+)
+
+from brain.context import (
+    add_message,
+    get_messages,
+)
 
 from brain.parser import extract_memory
 from brain.memory import remember
@@ -18,10 +26,13 @@ def process(
 ):
     """
     Main entry point for Aarya.
+
+    The selected model provider is passed through
+    the entire processing pipeline.
     """
 
     # ---------------------------------------------------------
-    # SAVE USER MESSAGE
+    # ADD USER MESSAGE
     # ---------------------------------------------------------
 
     add_message(
@@ -47,19 +58,27 @@ def process(
         )
 
     # ---------------------------------------------------------
-    # SKILLS
+    # CREATE PLAN
     # ---------------------------------------------------------
 
     plan = create_plan(
-        user_input,
+        user_input
     )
+
+    # ---------------------------------------------------------
+    # EXECUTE SKILLS
+    # ---------------------------------------------------------
 
     reply = execute_plan(
         plan,
         platform=platform,
     )
 
-    if reply.strip():
+    # ---------------------------------------------------------
+    # SKILL RESPONSE
+    # ---------------------------------------------------------
+
+    if reply and reply.strip():
 
         add_message(
             "assistant",
@@ -96,10 +115,13 @@ def process_stream(
 ):
     """
     Streaming version of Aarya's processing pipeline.
+
+    The selected model provider is passed through
+    memory extraction and model generation.
     """
 
     # ---------------------------------------------------------
-    # SAVE USER MESSAGE
+    # ADD USER MESSAGE
     # ---------------------------------------------------------
 
     add_message(
@@ -125,19 +147,27 @@ def process_stream(
         )
 
     # ---------------------------------------------------------
-    # SKILLS
+    # CREATE PLAN
     # ---------------------------------------------------------
 
     plan = create_plan(
-        user_input,
+        user_input
     )
+
+    # ---------------------------------------------------------
+    # EXECUTE SKILLS
+    # ---------------------------------------------------------
 
     reply = execute_plan(
         plan,
         platform=platform,
     )
 
-    if reply.strip():
+    # ---------------------------------------------------------
+    # SKILL RESPONSE
+    # ---------------------------------------------------------
+
+    if reply and reply.strip():
 
         add_message(
             "assistant",
@@ -159,11 +189,12 @@ def process_stream(
         model_provider=model_provider,
     ):
 
-        if chunk:
+        if not chunk:
+            continue
 
-            full_response += chunk
+        full_response += chunk
 
-            yield chunk
+        yield chunk
 
     # ---------------------------------------------------------
     # SAVE COMPLETE RESPONSE
