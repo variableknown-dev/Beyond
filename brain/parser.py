@@ -43,10 +43,63 @@ Rules:
 """
 
 
+# =========================================================
+# MEMORY DETECTION
+# =========================================================
+
+def looks_like_memory(user_input):
+    """
+    Quickly determine whether a message is likely
+    to contain information worth remembering.
+
+    This check is intentionally local so ordinary
+    conversations do not require an additional
+    Gemini request.
+    """
+
+    text = user_input.lower().strip()
+
+    triggers = [
+        "remember that",
+        "remember this",
+        "don't forget",
+        "do not forget",
+        "my favorite",
+        "my favourite",
+        "my preferred",
+        "i prefer",
+        "i like",
+        "i love",
+        "i live in",
+        "my name is",
+        "my project is",
+    ]
+
+    return any(
+        trigger in text
+        for trigger in triggers
+    )
+
+
+# =========================================================
+# MEMORY EXTRACTION
+# =========================================================
+
 def extract_memory(
     user_input,
-    model_provider=None,
+    model_provider,
 ):
+    """
+    Extract long-term memory from a message.
+
+    Gemini is only contacted when the message looks
+    like it may actually contain a memory.
+    """
+
+    if not looks_like_memory(
+        user_input
+    ):
+        return None
 
     response = ask_aarya(
         [
@@ -67,7 +120,9 @@ def extract_memory(
 
     try:
 
-        memory = json.loads(response)
+        memory = json.loads(
+            response
+        )
 
         required = {
             "category",
@@ -75,7 +130,9 @@ def extract_memory(
             "value",
         }
 
-        if not required.issubset(memory.keys()):
+        if not required.issubset(
+            memory.keys()
+        ):
             return None
 
         return memory

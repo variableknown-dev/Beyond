@@ -96,14 +96,6 @@ def process_stream(
 ):
     """
     Streaming version of Aarya's processing pipeline.
-
-    Skills are executed normally.
-
-    Model-generated responses are streamed
-    to the caller.
-
-    The supplied model_provider is used
-    throughout the entire pipeline.
     """
 
     # ---------------------------------------------------------
