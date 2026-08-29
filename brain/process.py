@@ -20,13 +20,22 @@ def process(
     Main entry point for Aarya.
     """
 
+    # ---------------------------------------------------------
+    # SAVE USER MESSAGE
+    # ---------------------------------------------------------
+
     add_message(
         "user",
         user_input,
     )
 
+    # ---------------------------------------------------------
+    # LONG-TERM MEMORY
+    # ---------------------------------------------------------
+
     memory = extract_memory(
-        user_input
+        user_input,
+        model_provider=model_provider,
     )
 
     if memory is not None:
@@ -37,8 +46,12 @@ def process(
             memory["value"],
         )
 
+    # ---------------------------------------------------------
+    # SKILLS
+    # ---------------------------------------------------------
+
     plan = create_plan(
-        user_input
+        user_input,
     )
 
     reply = execute_plan(
@@ -54,6 +67,10 @@ def process(
         )
 
         return reply
+
+    # ---------------------------------------------------------
+    # MODEL RESPONSE
+    # ---------------------------------------------------------
 
     reply = ask_aarya(
         get_messages(),
@@ -80,10 +97,18 @@ def process_stream(
     """
     Streaming version of Aarya's processing pipeline.
 
-    Skills are still executed normally.
+    Skills are executed normally.
 
-    Model-generated responses are streamed to the caller.
+    Model-generated responses are streamed
+    to the caller.
+
+    The supplied model_provider is used
+    throughout the entire pipeline.
     """
+
+    # ---------------------------------------------------------
+    # SAVE USER MESSAGE
+    # ---------------------------------------------------------
 
     add_message(
         "user",
@@ -95,7 +120,8 @@ def process_stream(
     # ---------------------------------------------------------
 
     memory = extract_memory(
-        user_input
+        user_input,
+        model_provider=model_provider,
     )
 
     if memory is not None:
@@ -111,7 +137,7 @@ def process_stream(
     # ---------------------------------------------------------
 
     plan = create_plan(
-        user_input
+        user_input,
     )
 
     reply = execute_plan(
@@ -141,9 +167,11 @@ def process_stream(
         model_provider=model_provider,
     ):
 
-        full_response += chunk
+        if chunk:
 
-        yield chunk
+            full_response += chunk
+
+            yield chunk
 
     # ---------------------------------------------------------
     # SAVE COMPLETE RESPONSE

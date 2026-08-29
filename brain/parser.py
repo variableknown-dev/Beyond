@@ -43,23 +43,30 @@ Rules:
 """
 
 
-def extract_memory(user_input):
+def extract_memory(
+    user_input,
+    model_provider=None,
+):
 
-    response = ask_aarya([
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT,
-        },
-        {
-            "role": "user",
-            "content": user_input,
-        },
-    ]).strip()
+    response = ask_aarya(
+        [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
+            {
+                "role": "user",
+                "content": user_input,
+            },
+        ],
+        model_provider=model_provider,
+    ).strip()
 
     if response.upper() == "NONE":
         return None
 
     try:
+
         memory = json.loads(response)
 
         required = {
@@ -74,4 +81,5 @@ def extract_memory(user_input):
         return memory
 
     except Exception:
+
         return None
