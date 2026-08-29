@@ -1,11 +1,30 @@
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 
-DB_NAME = "data/memory.db"
 
+# =========================================================
+# DATABASE
+# =========================================================
+
+DATA_DIR = Path("data")
+
+DATA_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+DB_NAME = DATA_DIR / "memory.db"
+
+
+# =========================================================
+# INITIALIZE MEMORY
+# =========================================================
 
 def init_memory():
+
     conn = sqlite3.connect(DB_NAME)
+
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -24,20 +43,28 @@ def init_memory():
     conn.close()
 
 
+# =========================================================
+# REMEMBER
+# =========================================================
+
 def remember(category, key, value):
     """
     Creates or updates a memory.
     """
 
-    now = datetime.now().isoformat(timespec="seconds")
+    now = datetime.now().isoformat(
+        timespec="seconds"
+    )
 
     conn = sqlite3.connect(DB_NAME)
+
     cursor = conn.cursor()
 
     cursor.execute("""
         INSERT INTO memories
         (category, memory_key, value, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?)
+
         ON CONFLICT(category, memory_key)
         DO UPDATE SET
             value = excluded.value,
@@ -54,12 +81,17 @@ def remember(category, key, value):
     conn.close()
 
 
+# =========================================================
+# RECALL
+# =========================================================
+
 def recall(category=None):
     """
     Returns all memories, or only one category.
     """
 
     conn = sqlite3.connect(DB_NAME)
+
     cursor = conn.cursor()
 
     if category is None:
@@ -86,19 +118,27 @@ def recall(category=None):
     return rows
 
 
+# =========================================================
+# GET ONE MEMORY
+# =========================================================
+
 def get_memory(category, key):
     """
     Returns one specific memory.
     """
 
     conn = sqlite3.connect(DB_NAME)
+
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT value
         FROM memories
         WHERE category=? AND memory_key=?
-    """, (category, key))
+    """, (
+        category,
+        key,
+    ))
 
     row = cursor.fetchone()
 
@@ -110,18 +150,26 @@ def get_memory(category, key):
     return None
 
 
+# =========================================================
+# FORGET
+# =========================================================
+
 def forget(category, key):
     """
     Deletes one memory.
     """
 
     conn = sqlite3.connect(DB_NAME)
+
     cursor = conn.cursor()
 
     cursor.execute("""
         DELETE FROM memories
         WHERE category=? AND memory_key=?
-    """, (category, key))
+    """, (
+        category,
+        key,
+    ))
 
     conn.commit()
     conn.close()
