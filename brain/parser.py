@@ -3,6 +3,10 @@ import json
 from brain.chat import ask_aarya
 
 
+# =========================================================
+# MEMORY EXTRACTION PROMPT
+# =========================================================
+
 SYSTEM_PROMPT = """
 You are Aarya's memory extraction engine.
 
@@ -44,12 +48,28 @@ Rules:
 """
 
 
+# =========================================================
+# EXTRACT MEMORY
+# =========================================================
+
 def extract_memory(
     user_input,
     model_provider=None,
 ):
+    """
+    Ask the model whether the user's message contains
+    useful long-term memory.
+
+    Returns:
+        dict    -> memory to save
+        None    -> nothing to remember or extraction failed
+    """
 
     try:
+
+        # -------------------------------------------------
+        # ASK MODEL
+        # -------------------------------------------------
 
         response = ask_aarya(
             [
@@ -63,27 +83,69 @@ def extract_memory(
                 },
             ],
             model_provider=model_provider,
-        ).strip()
-
-    except Exception as error:
-
-        print(
-            f"Memory extraction failed: {error}",
-            flush=True,
         )
 
-        # Memory failure must NEVER
-        # prevent normal conversation.
-        return None
+        # -------------------------------------------------
+        # HANDLE EMPTY RESPONSE
+        # -------------------------------------------------
 
-    if response.upper() == "NONE":
-        return None
+        if not response:
 
-    try:
+            print(
+                "Memory extraction returned no response.",
+                flush=True,
+            )
 
-        memory = json.loads(
-            response
-        )
+            return None
+
+        response = response.strip()
+
+        # -------------------------------------------------
+        # NOTHING TO REMEMBER
+        # -------------------------------------------------
+
+        if response.upper() == "NONE":
+
+            return None
+
+        # -------------------------------------------------
+        # PARSE JSON
+        # -------------------------------------------------
+
+        try:
+
+            memory = json.loads(
+                response
+            )
+
+        except json.JSONDecodeError:
+
+            print(
+                "Memory extraction returned invalid JSON.",
+                flush=True,
+            )
+
+            return None
+
+        # -------------------------------------------------
+        # MAKE SURE IT IS A DICTIONARY
+        # -------------------------------------------------
+
+        if not isinstance(
+            memory,
+            dict,
+        ):
+
+            print(
+                "Memory extraction returned non-object JSON.",
+                flush=True,
+            )
+
+            return None
+
+        # -------------------------------------------------
+        # REQUIRED FIELDS
+        # -------------------------------------------------
 
         required = {
             "category",
@@ -95,14 +157,52 @@ def extract_memory(
             memory.keys()
         ):
 
+            print(
+                "Memory extraction JSON is missing required fields.",
+                flush=True,
+            )
+
             return None
 
-        return memory
+        # -------------------------------------------------
+        # VALIDATE VALUES
+        # -------------------------------------------------
+
+        if not memory["category"]:
+            return None
+
+        if not memory["key"]:
+            return None
+
+        if not memory["value"]:
+            return None
+
+        # -------------------------------------------------
+        # SUCCESS
+        # -------------------------------------------------
+
+        return {
+            "category": str(
+                memory["category"]
+            ).strip(),
+
+            "key": str(
+                memory["key"]
+            ).strip(),
+
+            "value": str(
+                memory["value"]
+            ).strip(),
+        }
+
+    # =====================================================
+    # NEVER LET MEMORY BREAK AARYA
+    # =====================================================
 
     except Exception as error:
 
         print(
-            f"Invalid memory response: {error}",
+            f"Memory extraction failed: {error}",
             flush=True,
         )
 
