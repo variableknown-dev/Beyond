@@ -6,7 +6,8 @@ from brain.chat import ask_aarya
 SYSTEM_PROMPT = """
 You are Aarya's memory extraction engine.
 
-Your job is to decide whether something should be stored as long-term memory.
+Your job is to decide whether something should be stored
+as long-term memory.
 
 Only store facts that are likely to remain useful.
 
@@ -47,33 +48,42 @@ def extract_memory(
     user_input,
     model_provider=None,
 ):
-    """
-    Extract a possible long-term memory.
 
-    Uses the supplied model provider instead of
-    automatically falling back to local Ollama.
-    """
+    try:
 
-    response = ask_aarya(
-        [
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": user_input,
-            },
-        ],
-        model_provider=model_provider,
-    ).strip()
+        response = ask_aarya(
+            [
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT,
+                },
+                {
+                    "role": "user",
+                    "content": user_input,
+                },
+            ],
+            model_provider=model_provider,
+        ).strip()
+
+    except Exception as error:
+
+        print(
+            f"Memory extraction failed: {error}",
+            flush=True,
+        )
+
+        # Memory failure must NEVER
+        # prevent normal conversation.
+        return None
 
     if response.upper() == "NONE":
         return None
 
     try:
 
-        memory = json.loads(response)
+        memory = json.loads(
+            response
+        )
 
         required = {
             "category",
@@ -84,9 +94,16 @@ def extract_memory(
         if not required.issubset(
             memory.keys()
         ):
+
             return None
 
         return memory
 
-    except Exception:
+    except Exception as error:
+
+        print(
+            f"Invalid memory response: {error}",
+            flush=True,
+        )
+
         return None

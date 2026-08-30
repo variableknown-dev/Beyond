@@ -1,4 +1,8 @@
-from brain.process import process, process_stream
+from brain.process import (
+    process,
+    process_stream,
+)
+
 from brain.memory import init_memory
 
 from platforms.detector import detect_platform
@@ -8,9 +12,9 @@ class Aarya:
     """
     Main interface to the Aarya AI assistant.
 
-    The model provider and platform can both be injected,
-    allowing different Aarya installations to use different
-    models and capabilities.
+    The model provider and platform are injected,
+    allowing different Aarya installations to use
+    different models and capabilities.
     """
 
     def __init__(
@@ -19,24 +23,25 @@ class Aarya:
         model_provider=None,
     ):
 
-        # -----------------------------------------
-        # Initialize local memory
-        # -----------------------------------------
+        # =====================================================
+        # INITIALIZE MEMORY
+        # =====================================================
 
         init_memory()
 
-        # -----------------------------------------
-        # Detect platform
-        # -----------------------------------------
+        # =====================================================
+        # DETECT PLATFORM
+        # =====================================================
 
         if platform is None:
+
             platform = detect_platform()
 
         self.platform = platform
 
-        # -----------------------------------------
-        # Model provider
-        # -----------------------------------------
+        # =====================================================
+        # MODEL PROVIDER
+        # =====================================================
 
         self.model_provider = model_provider
 
@@ -49,13 +54,13 @@ class Aarya:
         user_input: str,
     ) -> str:
         """
-        Send a message to Aarya and receive the
-        complete response at once.
+        Send a message and receive the complete response.
         """
 
         user_input = user_input.strip()
 
         if not user_input:
+
             return ""
 
         return process(
@@ -73,16 +78,13 @@ class Aarya:
         user_input: str,
     ):
         """
-        Send a message to Aarya and stream the response
-        as it is generated.
-
-        This is intended for the web interface and other
-        clients that support streaming responses.
+        Send a message and stream the response.
         """
 
         user_input = user_input.strip()
 
         if not user_input:
+
             return
 
         yield from process_stream(

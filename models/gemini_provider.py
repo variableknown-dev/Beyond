@@ -1,4 +1,5 @@
 import os
+import time
 
 from google import genai
 from google.genai import types
@@ -9,16 +10,24 @@ from brain.prompt import SYSTEM_PROMPT
 
 class GeminiProvider(ModelProvider):
     """
-    Model provider for Google's Gemini API.
+    Gemini model provider.
 
-    Supports both:
-        - normal complete responses
+    Supports:
+        - normal responses
         - streaming responses
+        - automatic retry for temporary 503/429 errors
     """
 
-    def __init__(self, model="gemini-3.7-flash"):
+    def __init__(
+        self,
+        model="gemini-3.7-flash",
+        max_retries=3,
+        retry_delay=3,
+    ):
 
         self.model = model
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
 
         api_key = os.getenv("GEMINI_API_KEY")
 
@@ -71,6 +80,33 @@ class GeminiProvider(ModelProvider):
         return contents
 
     # =========================================================
+    # CHECK RETRYABLE ERROR
+    # =========================================================
+
+    def _is_retryable(self, error):
+
+        status_code = getattr(
+            error,
+            "status_code",
+            None,
+        )
+
+        if status_code is None:
+            status_code = getattr(
+                error,
+                "code",
+                None,
+            )
+
+        return status_code in (
+            429,
+            500,
+            502,
+            503,
+            504,
+        )
+
+    # =========================================================
     # NORMAL CHAT
     # =========================================================
 
@@ -80,15 +116,55 @@ class GeminiProvider(ModelProvider):
             messages
         )
 
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-            ),
-        )
+        last_error = None
 
-        return response.text
+        for attempt in range(
+            self.max_retries + 1
+        ):
+
+            try:
+
+                response = (
+                    self.client.models.generate_content(
+                        model=self.model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                        ),
+                    )
+                )
+
+                return response.text or ""
+
+            except Exception as error:
+
+                last_error = error
+
+                if not self._is_retryable(
+                    error
+                ):
+
+                    raise
+
+                if attempt >= self.max_retries:
+
+                    raise
+
+                delay = (
+                    self.retry_delay
+                    * (2 ** attempt)
+                )
+
+                print(
+                    f"Gemini temporary error "
+                    f"({getattr(error, 'status_code', 'unknown')}). "
+                    f"Retrying in {delay}s...",
+                    flush=True,
+                )
+
+                time.sleep(delay)
+
+        raise last_error
 
     # =========================================================
     # STREAMING CHAT
@@ -100,23 +176,64 @@ class GeminiProvider(ModelProvider):
             messages
         )
 
-        response_stream = (
-            self.client.models.generate_content_stream(
-                model=self.model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                ),
-            )
-        )
+        last_error = None
 
-        for chunk in response_stream:
+        for attempt in range(
+            self.max_retries + 1
+        ):
 
-            text = getattr(
-                chunk,
-                "text",
-                None,
-            )
+            try:
 
-            if text:
-                yield text
+                response_stream = (
+                    self.client.models.generate_content_stream(
+                        model=self.model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                        ),
+                    )
+                )
+
+                for chunk in response_stream:
+
+                    text = getattr(
+                        chunk,
+                        "text",
+                        None,
+                    )
+
+                    if text:
+
+                        yield text
+
+                return
+
+            except Exception as error:
+
+                last_error = error
+
+                if not self._is_retryable(
+                    error
+                ):
+
+                    raise
+
+                if attempt >= self.max_retries:
+
+                    raise
+
+                delay = (
+                    self.retry_delay
+                    * (2 ** attempt)
+                )
+
+                print(
+                    f"Gemini streaming error "
+                    f"({getattr(error, 'status_code', 'unknown')}). "
+                    f"Retrying in {delay}s...",
+                    flush=True,
+                )
+
+                time.sleep(delay)
+
+        raise last_error
