@@ -1,18 +1,109 @@
 from brain.planner import create_plan
 from brain.executor import execute_plan
-
-from brain.chat import (
-    ask_aarya,
-    stream_aarya,
-)
-
-from brain.context import (
-    add_message,
-    get_messages,
-)
+from brain.chat import ask_aarya, stream_aarya
+from brain.context import add_message, get_messages
 
 from brain.parser import extract_memory
 from brain.memory import remember
+
+
+# =========================================================
+# MEMORY TRIGGER
+# =========================================================
+
+MEMORY_TRIGGERS = (
+    "remember that",
+    "remember this",
+    "remember",
+    "don't forget",
+    "dont forget",
+    "my name is",
+    "my favorite",
+    "my favourite",
+    "i prefer",
+    "i like",
+    "i don't like",
+    "i dont like",
+    "i hate",
+    "i love",
+    "i use",
+    "i am using",
+    "i'm using",
+    "i live",
+    "i'm from",
+    "im from",
+)
+
+
+def should_extract_memory(user_input: str) -> bool:
+    """
+    Only run the memory extraction model when the user
+    appears to be giving Aarya something worth remembering.
+
+    This prevents an unnecessary AI request on normal
+    messages such as:
+        "hello"
+        "how are you?"
+        "explain photosynthesis"
+    """
+
+    text = user_input.lower().strip()
+
+    return any(
+        trigger in text
+        for trigger in MEMORY_TRIGGERS
+    )
+
+
+# =========================================================
+# MEMORY
+# =========================================================
+
+def handle_memory(
+    user_input,
+    model_provider=None,
+):
+    """
+    Extract and save long-term memory only when appropriate.
+
+    The model provider is passed through so Render uses Gemini
+    instead of accidentally falling back to local Ollama.
+    """
+
+    if not should_extract_memory(user_input):
+        return
+
+    try:
+
+        memory = extract_memory(
+            user_input,
+            model_provider=model_provider,
+        )
+
+        if memory is None:
+            return
+
+        remember(
+            memory["category"],
+            memory["key"],
+            memory["value"],
+        )
+
+        print(
+            f"[MEMORY] Saved: "
+            f"{memory['category']} / "
+            f"{memory['key']} = "
+            f"{memory['value']}"
+        )
+
+    except Exception as error:
+
+        # Memory failure should NEVER prevent Aarya
+        # from answering the user's actual message.
+
+        print(
+            f"[MEMORY] Memory extraction failed: {error}"
+        )
 
 
 # =========================================================
@@ -25,14 +116,16 @@ def process(
     model_provider=None,
 ):
     """
-    Main entry point for Aarya.
-
-    The selected model provider is passed through
-    the entire processing pipeline.
+    Main processing pipeline for Aarya.
     """
 
+    user_input = user_input.strip()
+
+    if not user_input:
+        return ""
+
     # ---------------------------------------------------------
-    # ADD USER MESSAGE
+    # SAVE USER MESSAGE
     # ---------------------------------------------------------
 
     add_message(
@@ -44,18 +137,10 @@ def process(
     # LONG-TERM MEMORY
     # ---------------------------------------------------------
 
-    memory = extract_memory(
+    handle_memory(
         user_input,
         model_provider=model_provider,
     )
-
-    if memory is not None:
-
-        remember(
-            memory["category"],
-            memory["key"],
-            memory["value"],
-        )
 
     # ---------------------------------------------------------
     # CREATE PLAN
@@ -75,7 +160,7 @@ def process(
     )
 
     # ---------------------------------------------------------
-    # SKILL RESPONSE
+    # SKILL HANDLED REQUEST
     # ---------------------------------------------------------
 
     if reply and reply.strip():
@@ -88,7 +173,7 @@ def process(
         return reply
 
     # ---------------------------------------------------------
-    # MODEL RESPONSE
+    # NORMAL AI CHAT
     # ---------------------------------------------------------
 
     reply = ask_aarya(
@@ -96,10 +181,21 @@ def process(
         model_provider=model_provider,
     )
 
-    add_message(
-        "assistant",
-        reply,
-    )
+    if reply is None:
+        reply = ""
+
+    reply = str(reply)
+
+    # ---------------------------------------------------------
+    # SAVE ASSISTANT RESPONSE
+    # ---------------------------------------------------------
+
+    if reply.strip():
+
+        add_message(
+            "assistant",
+            reply,
+        )
 
     return reply
 
@@ -114,14 +210,20 @@ def process_stream(
     model_provider=None,
 ):
     """
-    Streaming version of Aarya's processing pipeline.
+    Streaming processing pipeline.
 
-    The selected model provider is passed through
-    memory extraction and model generation.
+    Memory and skills are handled first.
+    If no skill handles the request, Gemini's response
+    is streamed directly to the web interface.
     """
 
+    user_input = user_input.strip()
+
+    if not user_input:
+        return
+
     # ---------------------------------------------------------
-    # ADD USER MESSAGE
+    # SAVE USER MESSAGE
     # ---------------------------------------------------------
 
     add_message(
@@ -133,18 +235,10 @@ def process_stream(
     # LONG-TERM MEMORY
     # ---------------------------------------------------------
 
-    memory = extract_memory(
+    handle_memory(
         user_input,
         model_provider=model_provider,
     )
-
-    if memory is not None:
-
-        remember(
-            memory["category"],
-            memory["key"],
-            memory["value"],
-        )
 
     # ---------------------------------------------------------
     # CREATE PLAN
@@ -164,7 +258,7 @@ def process_stream(
     )
 
     # ---------------------------------------------------------
-    # SKILL RESPONSE
+    # SKILL HANDLED REQUEST
     # ---------------------------------------------------------
 
     if reply and reply.strip():
@@ -179,28 +273,48 @@ def process_stream(
         return
 
     # ---------------------------------------------------------
-    # MODEL STREAM
+    # STREAM GEMINI RESPONSE
     # ---------------------------------------------------------
 
     full_response = ""
 
-    for chunk in stream_aarya(
-        get_messages(),
-        model_provider=model_provider,
-    ):
+    try:
 
-        if not chunk:
-            continue
+        for chunk in stream_aarya(
+            get_messages(),
+            model_provider=model_provider,
+        ):
 
-        full_response += chunk
+            if not chunk:
+                continue
 
-        yield chunk
+            full_response += chunk
+
+            yield chunk
+
+    except Exception as error:
+
+        print(
+            f"[AARYA] Streaming error: {error}"
+        )
+
+        # Only send an error if nothing has already
+        # been generated.
+
+        if not full_response:
+
+            yield (
+                "Sorry, I ran into an error "
+                "while generating that response."
+            )
+
+        return
 
     # ---------------------------------------------------------
     # SAVE COMPLETE RESPONSE
     # ---------------------------------------------------------
 
-    if full_response:
+    if full_response.strip():
 
         add_message(
             "assistant",
