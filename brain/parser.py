@@ -48,10 +48,10 @@ def extract_memory(
     model_provider=None,
 ):
     """
-    Analyze the user's message and determine
-    whether it contains a long-term memory.
+    Extract a possible long-term memory.
 
-    Uses the supplied model provider.
+    Uses the supplied model provider instead of
+    automatically falling back to local Ollama.
     """
 
     response = ask_aarya(
@@ -89,5 +89,4 @@ def extract_memory(
         return memory
 
     except Exception:
-
         return None
