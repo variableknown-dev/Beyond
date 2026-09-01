@@ -1,209 +1,155 @@
-import json
+import re
 
-from brain.chat import ask_aarya
-
-
-# =========================================================
-# MEMORY EXTRACTION PROMPT
-# =========================================================
-
-SYSTEM_PROMPT = """
-You are Aarya's memory extraction engine.
-
-Your job is to decide whether something should be stored
-as long-term memory.
-
-Only store facts that are likely to remain useful.
-
-Allowed categories:
-
-preference
-location
-project
-person
-fact
-other
-
-If nothing should be remembered, reply EXACTLY:
-
-NONE
-
-Otherwise reply ONLY valid JSON.
-
-Example:
-
-{
-    "category": "preference",
-    "key": "browser",
-    "value": "Firefox"
-}
-
-Rules:
-
-- Reply ONLY JSON.
-- No markdown.
-- No explanation.
-- No extra text.
-- Keys should be lowercase_with_underscores.
-"""
+from brain.memory import remember
 
 
 # =========================================================
-# EXTRACT MEMORY
+# MEMORY EXTRACTION
 # =========================================================
 
-def extract_memory(
-    user_input,
-    model_provider=None,
-):
+def extract_memory(user_input):
     """
-    Ask the model whether the user's message contains
-    useful long-term memory.
+    Extract obvious long-term memories without calling
+    an AI model.
 
     Returns:
-        dict    -> memory to save
-        None    -> nothing to remember or extraction failed
+        dict | None
     """
 
-    try:
+    if not user_input:
+        return None
 
-        # -------------------------------------------------
-        # ASK MODEL
-        # -------------------------------------------------
+    text = user_input.strip()
 
-        response = ask_aarya(
-            [
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": user_input,
-                },
-            ],
-            model_provider=model_provider,
-        )
+    if not text:
+        return None
 
-        # -------------------------------------------------
-        # HANDLE EMPTY RESPONSE
-        # -------------------------------------------------
+    lower = text.lower()
 
-        if not response:
+    # -----------------------------------------------------
+    # Explicit "remember" requests
+    # -----------------------------------------------------
 
-            print(
-                "Memory extraction returned no response.",
-                flush=True,
-            )
+    if lower.startswith("remember that "):
+        content = text[13:].strip()
 
-            return None
+    elif lower.startswith("remember "):
+        content = text[9:].strip()
 
-        response = response.strip()
+    else:
+        return None
 
-        # -------------------------------------------------
-        # NOTHING TO REMEMBER
-        # -------------------------------------------------
+    if not content:
+        return None
 
-        if response.upper() == "NONE":
+    # -----------------------------------------------------
+    # "my favorite X is Y"
+    # -----------------------------------------------------
 
-            return None
+    match = re.match(
+        r"my\s+favorite\s+(.+?)\s+is\s+(.+)",
+        content,
+        re.IGNORECASE,
+    )
 
-        # -------------------------------------------------
-        # PARSE JSON
-        # -------------------------------------------------
+    if match:
 
-        try:
+        key = match.group(1).strip()
+        value = match.group(2).strip()
 
-            memory = json.loads(
-                response
-            )
-
-        except json.JSONDecodeError:
-
-            print(
-                "Memory extraction returned invalid JSON.",
-                flush=True,
-            )
-
-            return None
-
-        # -------------------------------------------------
-        # MAKE SURE IT IS A DICTIONARY
-        # -------------------------------------------------
-
-        if not isinstance(
-            memory,
-            dict,
-        ):
-
-            print(
-                "Memory extraction returned non-object JSON.",
-                flush=True,
-            )
-
-            return None
-
-        # -------------------------------------------------
-        # REQUIRED FIELDS
-        # -------------------------------------------------
-
-        required = {
-            "category",
-            "key",
-            "value",
-        }
-
-        if not required.issubset(
-            memory.keys()
-        ):
-
-            print(
-                "Memory extraction JSON is missing required fields.",
-                flush=True,
-            )
-
-            return None
-
-        # -------------------------------------------------
-        # VALIDATE VALUES
-        # -------------------------------------------------
-
-        if not memory["category"]:
-            return None
-
-        if not memory["key"]:
-            return None
-
-        if not memory["value"]:
-            return None
-
-        # -------------------------------------------------
-        # SUCCESS
-        # -------------------------------------------------
+        key = key.lower().replace(" ", "_")
 
         return {
-            "category": str(
-                memory["category"]
-            ).strip(),
-
-            "key": str(
-                memory["key"]
-            ).strip(),
-
-            "value": str(
-                memory["value"]
-            ).strip(),
+            "category": "preference",
+            "key": key,
+            "value": value,
         }
 
-    # =====================================================
-    # NEVER LET MEMORY BREAK AARYA
-    # =====================================================
+    # -----------------------------------------------------
+    # "I prefer X"
+    # -----------------------------------------------------
 
-    except Exception as error:
+    match = re.match(
+        r"i\s+prefer\s+(.+)",
+        content,
+        re.IGNORECASE,
+    )
 
-        print(
-            f"Memory extraction failed: {error}",
-            flush=True,
-        )
+    if match:
 
-        return None
+        value = match.group(1).strip()
+
+        return {
+            "category": "preference",
+            "key": "preference",
+            "value": value,
+        }
+
+    # -----------------------------------------------------
+    # "I like X"
+    # -----------------------------------------------------
+
+    match = re.match(
+        r"i\s+like\s+(.+)",
+        content,
+        re.IGNORECASE,
+    )
+
+    if match:
+
+        value = match.group(1).strip()
+
+        return {
+            "category": "preference",
+            "key": "likes",
+            "value": value,
+        }
+
+    # -----------------------------------------------------
+    # "my X is Y"
+    # -----------------------------------------------------
+
+    match = re.match(
+        r"my\s+(.+?)\s+is\s+(.+)",
+        content,
+        re.IGNORECASE,
+    )
+
+    if match:
+
+        key = match.group(1).strip()
+        value = match.group(2).strip()
+
+        key = key.lower().replace(" ", "_")
+
+        return {
+            "category": "fact",
+            "key": key,
+            "value": value,
+        }
+
+    # -----------------------------------------------------
+    # "I am X"
+    # -----------------------------------------------------
+
+    match = re.match(
+        r"i\s+am\s+(.+)",
+        content,
+        re.IGNORECASE,
+    )
+
+    if match:
+
+        value = match.group(1).strip()
+
+        return {
+            "category": "fact",
+            "key": "user_description",
+            "value": value,
+        }
+
+    # -----------------------------------------------------
+    # Nothing recognized
+    # -----------------------------------------------------
+
+    return None

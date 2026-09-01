@@ -16,9 +16,6 @@ def process(
     platform=None,
     model_provider=None,
 ):
-    """
-    Main processing pipeline for Aarya.
-    """
 
     add_message(
         "user",
@@ -26,12 +23,11 @@ def process(
     )
 
     # -----------------------------------------------------
-    # LONG-TERM MEMORY
+    # MEMORY
     # -----------------------------------------------------
 
     memory = extract_memory(
-        user_input,
-        model_provider=model_provider,
+        user_input
     )
 
     if memory is not None:
@@ -65,13 +61,16 @@ def process(
         return reply
 
     # -----------------------------------------------------
-    # MODEL RESPONSE
+    # NORMAL MODEL CHAT
     # -----------------------------------------------------
 
     reply = ask_aarya(
         get_messages(),
         model_provider=model_provider,
     )
+
+    if not reply:
+        reply = "Sorry, I didn't receive a response."
 
     add_message(
         "assistant",
@@ -90,9 +89,6 @@ def process_stream(
     platform=None,
     model_provider=None,
 ):
-    """
-    Streaming processing pipeline for Aarya.
-    """
 
     add_message(
         "user",
@@ -100,12 +96,11 @@ def process_stream(
     )
 
     # -----------------------------------------------------
-    # LONG-TERM MEMORY
+    # MEMORY
     # -----------------------------------------------------
 
     memory = extract_memory(
-        user_input,
-        model_provider=model_provider,
+        user_input
     )
 
     if memory is not None:
@@ -141,7 +136,7 @@ def process_stream(
         return
 
     # -----------------------------------------------------
-    # MODEL STREAM
+    # STREAM MODEL RESPONSE
     # -----------------------------------------------------
 
     full_response = ""
@@ -153,29 +148,29 @@ def process_stream(
             model_provider=model_provider,
         ):
 
-            if chunk:
+            if not chunk:
+                continue
 
-                full_response += chunk
+            full_response += chunk
 
-                yield chunk
+            yield chunk
 
     except Exception as error:
 
         print(
-            f"Aarya model error: {error}",
+            f"Aarya streaming error: {error}",
             flush=True,
         )
 
         yield (
-            "\n\nSorry, I ran into "
-            "an error while generating "
-            "that response."
+            "\n\nSorry, I ran into an error "
+            "while generating that response."
         )
 
         return
 
     # -----------------------------------------------------
-    # SAVE COMPLETE RESPONSE
+    # SAVE RESPONSE
     # -----------------------------------------------------
 
     if full_response:
