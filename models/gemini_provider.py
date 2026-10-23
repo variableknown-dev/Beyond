@@ -9,26 +9,14 @@ from brain.prompt import SYSTEM_PROMPT
 
 
 class GeminiProvider(ModelProvider):
-    """
-    Gemini model provider.
-
-    Supports:
-        - normal responses
-        - streaming responses
-        - automatic retry for temporary 503/429 errors
-    """
+    """Gemini provider with normal and streaming responses."""
 
     def __init__(
         self,
         model="gemini-3.7-flash",
-        max_retries=3,
-        retry_delay=3,
+        max_retries=2,
+        retry_delay=1,
     ):
-
-        self.model = model
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-
         api_key = os.getenv("GEMINI_API_KEY")
 
         if not api_key:
@@ -36,86 +24,145 @@ class GeminiProvider(ModelProvider):
                 "GEMINI_API_KEY environment variable is not set."
             )
 
-        self.client = genai.Client(
-            api_key=api_key
-        )
+        self.model = model
+        self.max_retries = max(0, int(max_retries))
+        self.retry_delay = max(0.5, float(retry_delay))
 
-    # =========================================================
-    # BUILD CONTENTS
-    # =========================================================
+        self.client = genai.Client(api_key=api_key)
 
     def _build_contents(self, messages):
-
         contents = []
 
         for message in messages:
+            role = message.get("role", "user")
+            content = message.get("content", "")
 
-            role = message.get(
-                "role",
-                "user",
-            )
-
-            content = message.get(
-                "content",
-                "",
-            )
-
-            if not content:
+            if not isinstance(content, str) or not content.strip():
                 continue
 
             if role == "assistant":
                 role = "model"
+            elif role != "model":
+                role = "user"
 
             contents.append(
                 types.Content(
                     role=role,
-                    parts=[
-                        types.Part.from_text(
-                            text=content
-                        )
-                    ],
+                    parts=[types.Part.from_text(text=content)],
                 )
             )
 
         return contents
 
-    # =========================================================
-    # CHECK RETRYABLE ERROR
-    # =========================================================
-
-    def _is_retryable(self, error):
-
-        status_code = getattr(
-            error,
-            "status_code",
-            None,
-        )
+    @staticmethod
+    def _is_retryable(error):
+        status_code = getattr(error, "status_code", None)
 
         if status_code is None:
-            status_code = getattr(
-                error,
-                "code",
-                None,
-            )
+            status_code = getattr(error, "code", None)
 
-        return status_code in (
-            429,
-            500,
-            502,
-            503,
-            504,
+        if status_code is None:
+            response = getattr(error, "response", None)
+            status_code = getattr(response, "status_code", None)
+
+        return status_code in (429, 500, 502, 503, 504)
+
+    def _generate_config(self):
+        return types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
         )
-
-    # =========================================================
-    # NORMAL CHAT
-    # =========================================================
 
     def chat(self, messages):
+        contents = self._build_contents(messages)
 
-        contents = self._build_contents(
-            messages
-        )
+        if not contents:
+            return ""
 
         last_error = None
 
+        for attempt in range(self.max_retries + 1):
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=contents,
+                    config=self._generate_config(),
+                )
 
+                text = getattr(response, "text", None)
+                return text.strip() if isinstance(text, str) else ""
+
+            except Exception as error:
+                last_error = error
+
+                if (
+                    attempt >= self.max_retries
+                    or not self._is_retryable(error)
+                ):
+                    break
+
+                delay = self.retry_delay * (2 ** attempt)
+                print(
+                    f"Gemini temporary error; retrying in "
+                    f"{delay:.1f}s "
+                    f"({attempt + 1}/{self.max_retries}): {error}",
+                    flush=True,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(
+            f"Gemini request failed after retries: {last_error}"
+        ) from last_error
+
+    def chat_stream(self, messages):
+        contents = self._build_contents(messages)
+
+        if not contents:
+            return
+
+        last_error = None
+
+        for attempt in range(self.max_retries + 1):
+            yielded_text = False
+
+            try:
+                stream = self.client.models.generate_content_stream(
+                    model=self.model,
+                    contents=contents,
+                    config=self._generate_config(),
+                )
+
+                for chunk in stream:
+                    text = getattr(chunk, "text", None)
+
+                    if isinstance(text, str) and text:
+                        yielded_text = True
+                        yield text
+
+                return
+
+            except Exception as error:
+                last_error = error
+
+                # Never restart a partially delivered response:
+                # doing so could duplicate text in the UI.
+                if yielded_text:
+                    raise
+
+                if (
+                    attempt >= self.max_retries
+                    or not self._is_retryable(error)
+                ):
+                    break
+
+                delay = self.retry_delay * (2 ** attempt)
+                print(
+                    f"Gemini streaming error; retrying in "
+                    f"{delay:.1f}s "
+                    f"({attempt + 1}/{self.max_retries}): {error}",
+                    flush=True,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(
+            f"Gemini streaming request failed after retries: {last_error}"
+        ) from last_error

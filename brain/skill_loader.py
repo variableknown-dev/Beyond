@@ -1,65 +1,82 @@
 import importlib
 import inspect
 import pkgutil
+import threading
 
 import skills
 
 from skills.base import Skill
 
 
+# Cache loaded skills so we don't repeatedly inspect
+# modules and recreate skill instances.
+_skill_cache = {}
+_skill_cache_lock = threading.RLock()
+
+
 def load_skills(platform=None):
     """
-    Automatically loads every Skill inside
-    the skills package.
+    Automatically load and cache skills.
 
-    The platform is injected into skills that
-    support platform-specific functionality.
+    Skills are cached separately for each platform
+    to avoid reloading them for every task.
     """
 
-    loaded = {}
+    cache_key = id(platform)
 
-    for _, module_name, _ in pkgutil.iter_modules(
-        skills.__path__
-    ):
+    with _skill_cache_lock:
 
-        if module_name == "base":
-            continue
+        # Reuse cached skills if the platform matches.
+        cached = _skill_cache.get(cache_key)
 
-        module = importlib.import_module(
-            f"skills.{module_name}"
-        )
+        if cached is not None:
 
-        for _, obj in inspect.getmembers(
-            module,
-            inspect.isclass,
+            cached_platform, loaded = cached
+
+            if cached_platform is platform:
+                return loaded
+
+        loaded = {}
+
+        for _, module_name, _ in pkgutil.iter_modules(
+            skills.__path__
         ):
 
-            if (
-                issubclass(obj, Skill)
-                and obj is not Skill
+            if module_name == "base":
+                continue
+
+            module = importlib.import_module(
+                f"skills.{module_name}"
+            )
+
+            for _, obj in inspect.getmembers(
+                module,
+                inspect.isclass,
             ):
 
-                # -------------------------------------------------
-                # Try to initialize the skill with the platform.
-                # -------------------------------------------------
+                if (
+                    issubclass(obj, Skill)
+                    and obj is not Skill
+                ):
 
-                try:
+                    try:
+                        instance = obj(
+                            platform=platform
+                        )
 
-                    instance = obj(
-                        platform=platform
-                    )
+                    except TypeError:
+                        instance = obj()
 
-                except TypeError:
+                    loaded[
+                        instance.name.lower()
+                    ] = instance
 
-                    # -------------------------------------------------
-                    # Skills that don't need a platform can still
-                    # initialize normally.
-                    # -------------------------------------------------
+        # Store the platform reference alongside the skills.
+        # Keeping the reference also prevents its ID from
+        # being reused while the cache entry exists.
+        _skill_cache[cache_key] = (
+            platform,
+            loaded,
+        )
 
-                    instance = obj()
-
-                loaded[
-                    instance.name.lower()
-                ] = instance
-
-    return loaded
+        return loaded

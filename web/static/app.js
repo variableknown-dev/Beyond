@@ -1,3 +1,9 @@
+"use strict";
+
+// =========================================================
+// AARYA — CHAT INTERFACE
+// =========================================================
+
 const form = document.getElementById("chat-form");
 const input = document.getElementById("message");
 const chat = document.getElementById("chat");
@@ -9,526 +15,366 @@ const sidebarToggle = document.getElementById("sidebar-toggle");
 const newChat = document.getElementById("new-chat");
 
 let waiting = false;
+let activeController = null;
 
 
-/* =========================================
-   ADD MESSAGE
-========================================= */
+// =========================================================
+// MESSAGE CREATION
+// =========================================================
 
 function addMessage(sender, text, type) {
+    const message = document.createElement("div");
+    message.className = `message ${type}`;
 
-    const message =
-        document.createElement("div");
+    const senderElement = document.createElement("div");
+    senderElement.className = "sender";
+    senderElement.textContent = sender;
 
-    message.className =
-        `message ${type}`;
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
 
+    message.appendChild(senderElement);
+    message.appendChild(bubble);
 
-    const senderElement =
-        document.createElement("div");
-
-    senderElement.className =
-        "sender";
-
-    senderElement.textContent =
-        sender;
-
-
-    const bubble =
-        document.createElement("div");
-
-    bubble.className =
-        "bubble";
-
-    bubble.textContent =
-        text;
-
-
-    message.appendChild(
-        senderElement
-    );
-
-    message.appendChild(
-        bubble
-    );
-
-    chat.appendChild(
-        message
-    );
-
+    chat.appendChild(message);
     scrollToBottom();
+
+    return message;
 }
 
 
-/* =========================================
-   CREATE STREAMING MESSAGE
-========================================= */
+// =========================================================
+// STREAMING MESSAGE
+// =========================================================
 
 function createStreamingMessage() {
+    const message = document.createElement("div");
+    message.className = "message aarya";
 
-    const message =
-        document.createElement("div");
+    const sender = document.createElement("div");
+    sender.className = "sender";
+    sender.textContent = "Aarya";
 
-    message.className =
-        "message aarya";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = "";
 
+    message.appendChild(sender);
+    message.appendChild(bubble);
 
-    const sender =
-        document.createElement("div");
-
-    sender.className =
-        "sender";
-
-    sender.textContent =
-        "Aarya";
-
-
-    const bubble =
-        document.createElement("div");
-
-    bubble.className =
-        "bubble";
-
-    bubble.textContent =
-        "";
-
-
-    message.appendChild(
-        sender
-    );
-
-    message.appendChild(
-        bubble
-    );
-
-    chat.appendChild(
-        message
-    );
-
+    chat.appendChild(message);
     scrollToBottom();
-
 
     return bubble;
 }
 
 
-/* =========================================
-   TYPING INDICATOR
-========================================= */
+// =========================================================
+// THINKING INDICATOR
+// =========================================================
 
 function showTyping() {
-
     removeTyping();
 
-    const message =
-        document.createElement("div");
+    const message = document.createElement("div");
+    message.id = "typing-message";
+    message.className = "message aarya";
 
-    message.id =
-        "typing-message";
+    const sender = document.createElement("div");
+    sender.className = "sender";
+    sender.textContent = "Aarya";
 
-    message.className =
-        "message aarya";
+    const typing = document.createElement("div");
+    typing.className = "typing";
 
+    typing.setAttribute("role", "status");
+    typing.setAttribute("aria-label", "Aarya is thinking");
 
-    const sender =
-        document.createElement("div");
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement("span");
 
-    sender.className =
-        "sender";
+        dot.setAttribute("aria-hidden", "true");
 
-    sender.textContent =
-        "Aarya";
-
-
-    const typing =
-        document.createElement("div");
-
-    typing.className =
-        "typing";
-
-
-    for (
-        let i = 0;
-        i < 3;
-        i++
-    ) {
-
-        const dot =
-            document.createElement("span");
-
-        typing.appendChild(
-            dot
-        );
+        typing.appendChild(dot);
     }
 
+    message.appendChild(sender);
+    message.appendChild(typing);
 
-    message.appendChild(
-        sender
-    );
-
-    message.appendChild(
-        typing
-    );
-
-    chat.appendChild(
-        message
-    );
-
+    chat.appendChild(message);
     scrollToBottom();
 }
 
 
 function removeTyping() {
-
-    const existing =
-        document.getElementById(
-            "typing-message"
-        );
+    const existing = document.getElementById("typing-message");
 
     if (existing) {
-
         existing.remove();
-
     }
 }
 
 
-/* =========================================
-   SCROLL
-========================================= */
+// =========================================================
+// UI HELPERS
+// =========================================================
 
 function scrollToBottom() {
+    chat.scrollTop = chat.scrollHeight;
+}
 
-    chat.scrollTo({
 
-        top:
-            chat.scrollHeight,
+function resizeInput() {
+    input.style.height = "auto";
 
-        behavior:
-            "smooth"
+    input.style.height =
+        Math.min(input.scrollHeight, 160) + "px";
+}
 
+
+function setWaitingState(state) {
+    waiting = state;
+
+    sendButton.disabled = state;
+    input.disabled = state;
+
+    if (state) {
+        sendButton.setAttribute("aria-busy", "true");
+    } else {
+        sendButton.removeAttribute("aria-busy");
+    }
+}
+
+
+// =========================================================
+// STREAM RESPONSE
+// =========================================================
+
+async function streamResponse(message) {
+    activeController = new AbortController();
+
+    const response = await fetch("/api/chat/stream", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream, text/plain"
+        },
+
+        body: JSON.stringify({
+            message: message
+        }),
+
+        signal: activeController.signal
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Server returned HTTP ${response.status}`
+        );
+    }
+
+    if (!response.body) {
+        throw new Error(
+            "The server did not provide a readable response stream."
+        );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let bubble = null;
+    let fullResponse = "";
+
+    try {
+        while (true) {
+            const result = await reader.read();
+
+            if (result.done) {
+                break;
+            }
+
+            const chunk = decoder.decode(
+                result.value,
+                { stream: true }
+            );
+
+            if (!chunk) {
+                continue;
+            }
+
+            // Ignore whitespace-only chunks until real text arrives.
+            // The thinking indicator remains visible in the meantime.
+            if (!bubble && !chunk.trim()) {
+                continue;
+            }
+
+            // Replace the thinking indicator only when actual
+            // response content starts arriving.
+            if (!bubble) {
+                removeTyping();
+                bubble = createStreamingMessage();
+            }
+
+            fullResponse += chunk;
+            bubble.textContent = fullResponse;
+
+            scrollToBottom();
+        }
+
+        // Flush any remaining decoder content.
+        const remaining = decoder.decode();
+
+        if (remaining) {
+            if (!bubble && remaining.trim()) {
+                removeTyping();
+                bubble = createStreamingMessage();
+            }
+
+            if (bubble) {
+                fullResponse += remaining;
+                bubble.textContent = fullResponse;
+
+                scrollToBottom();
+            }
+        }
+
+        // Detect an empty response rather than leaving the UI blank.
+        if (!fullResponse.trim()) {
+            if (bubble) {
+                bubble.closest(".message")?.remove();
+            }
+
+            throw new Error(
+                "The server finished without returning response text."
+            );
+        }
+
+        return fullResponse;
+
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+
+// =========================================================
+// SUBMIT MESSAGE
+// =========================================================
+
+form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (waiting) {
+        return;
+    }
+
+    const message = input.value.trim();
+
+    if (!message) {
+        return;
+    }
+
+    // Remove the welcome screen when the first message is sent.
+    if (welcome) {
+        welcome.remove();
+    }
+
+    addMessage("You", message, "user");
+
+    input.value = "";
+    resizeInput();
+
+    setWaitingState(true);
+
+    // Display the indicator immediately, before the network request.
+    showTyping();
+
+    try {
+        await streamResponse(message);
+
+    } catch (error) {
+        removeTyping();
+
+        if (error.name === "AbortError") {
+            return;
+        }
+
+        console.error("Aarya streaming error:", error);
+
+        addMessage(
+            "Aarya",
+            "I'm sorry, something went wrong while processing that. Please try again.",
+            "aarya"
+        );
+
+    } finally {
+        removeTyping();
+
+        activeController = null;
+
+        setWaitingState(false);
+
+        input.focus();
+    }
+});
+
+
+// =========================================================
+// INPUT BEHAVIOR
+// =========================================================
+
+input.addEventListener("input", resizeInput);
+
+
+input.addEventListener("keydown", (event) => {
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey &&
+        !event.isComposing
+    ) {
+        event.preventDefault();
+        form.requestSubmit();
+    }
+});
+
+
+// =========================================================
+// SUGGESTIONS
+// =========================================================
+
+document.addEventListener("click", (event) => {
+    const button = event.target.closest(".suggestion");
+
+    if (!button) {
+        return;
+    }
+
+    input.value = button.textContent.trim();
+
+    resizeInput();
+    input.focus();
+});
+
+
+// =========================================================
+// NEW CHAT
+// =========================================================
+
+if (newChat) {
+    newChat.addEventListener("click", () => {
+        window.location.reload();
     });
 }
 
 
-/* =========================================
-   TEXTAREA AUTO RESIZE
-========================================= */
-
-function resizeInput() {
-
-    input.style.height =
-        "auto";
-
-    input.style.height =
-        Math.min(
-            input.scrollHeight,
-            160
-        ) + "px";
-}
-
-
-input.addEventListener(
-    "input",
-    resizeInput
-);
-
-
-/* =========================================
-   STREAM RESPONSE
-========================================= */
-
-async function streamResponse(message) {
-
-    const response =
-        await fetch(
-            "/api/chat/stream",
-            {
-
-                method:
-                    "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json"
-
-                },
-
-                body:
-                    JSON.stringify({
-                        message:
-                            message
-                    })
-
-            }
-        );
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            `Server returned ${response.status}`
-        );
-
-    }
-
-
-    if (!response.body) {
-
-        throw new Error(
-            "Streaming is not supported by this browser."
-        );
-
-    }
-
-
-    const reader =
-        response.body.getReader();
-
-
-    const decoder =
-        new TextDecoder();
-
-
-    const bubble =
-        createStreamingMessage();
-
-
-    let fullResponse =
-        "";
-
-
-    while (true) {
-
-        const {
-            value,
-            done
-        } =
-            await reader.read();
-
-
-        if (done) {
-            break;
-        }
-
-
-        const chunk =
-            decoder.decode(
-                value,
-                {
-                    stream:
-                        true
-                }
-            );
-
-
-        if (!chunk) {
-            continue;
-        }
-
-
-        fullResponse +=
-            chunk;
-
-
-        bubble.textContent =
-            fullResponse;
-
-
-        scrollToBottom();
-
-    }
-
-
-    return fullResponse;
-}
-
-
-/* =========================================
-   SUBMIT
-========================================= */
-
-form.addEventListener(
-    "submit",
-    async (event) => {
-
-        event.preventDefault();
-
-
-        if (waiting) {
-            return;
-        }
-
-
-        const message =
-            input.value.trim();
-
-
-        if (!message) {
-            return;
-        }
-
-
-        if (welcome) {
-
-            welcome.remove();
-
-        }
-
-
-        addMessage(
-            "You",
-            message,
-            "user"
-        );
-
-
-        input.value =
-            "";
-
-        resizeInput();
-
-
-        waiting =
-            true;
-
-        sendButton.disabled =
-            true;
-
-
-        showTyping();
-
-
-        try {
-
-            await streamResponse(
-                message
-            );
-
-
-            removeTyping();
-
-
-        } catch (error) {
-
-            console.error(
-                "Aarya streaming error:",
-                error
-            );
-
-
-            removeTyping();
-
-
-            addMessage(
-                "Aarya",
-                "I'm sorry, something went wrong while processing that.",
-                "aarya"
-            );
-
-        } finally {
-
-            waiting =
-                false;
-
-            sendButton.disabled =
-                false;
-
-            input.focus();
-
-        }
-
-    }
-);
-
-
-/* =========================================
-   ENTER TO SEND
-========================================= */
-
-input.addEventListener(
-    "keydown",
-    (event) => {
-
-        if (
-            event.key === "Enter" &&
-            !event.shiftKey
-        ) {
-
-            event.preventDefault();
-
-            form.requestSubmit();
-
-        }
-
-    }
-);
-
-
-/* =========================================
-   SUGGESTIONS
-========================================= */
-
-document.addEventListener(
-    "click",
-    (event) => {
-
-        const button =
-            event.target.closest(
-                ".suggestion"
-            );
-
-
-        if (!button) {
-            return;
-        }
-
-
-        input.value =
-            button.textContent.trim();
-
-
-        resizeInput();
-
-        input.focus();
-
-    }
-);
-
-
-/* =========================================
-   NEW CHAT
-========================================= */
-
-newChat.addEventListener(
-    "click",
-    () => {
-
-        chat.innerHTML =
-            "";
-
-        window.location.reload();
-
-    }
-);
-
-
-/* =========================================
-   MOBILE SIDEBAR
-========================================= */
-
-if (sidebarToggle) {
-
-    sidebarToggle.addEventListener(
-        "click",
-        () => {
-
-            sidebar.classList.toggle(
-                "open"
-            );
-
-        }
-    );
-
+// =========================================================
+// SIDEBAR
+// =========================================================
+
+if (sidebarToggle && sidebar) {
+    sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+    });
 }
