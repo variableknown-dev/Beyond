@@ -50,7 +50,7 @@ app.mount(
 platform = WebPlatform()
 
 model_provider = GeminiProvider(
-    model="gemini-3.7-flash"
+    model="gemini-3.5-flash-lite"
 )
 
 kashvi = Kashvi(

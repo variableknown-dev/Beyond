@@ -70,6 +70,9 @@ class GeminiProvider(ModelProvider):
     def _generate_config(self):
         return types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
+            thinking_config=types.ThinkingConfig(
+                thinking_level="minimal",
+            ),
         )
 
     def chat(self, messages):
