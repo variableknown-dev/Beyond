@@ -11,7 +11,9 @@ const sendButton = document.getElementById("send-button");
 const welcome = document.getElementById("welcome");
 
 const sidebar = document.querySelector(".sidebar");
+const main = document.querySelector(".main");
 const sidebarToggle = document.getElementById("sidebar-toggle");
+const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 const newChat = document.getElementById("new-chat");
 
 let waiting = false;
@@ -380,8 +382,62 @@ if (newChat) {
 // SIDEBAR
 // =========================================================
 
-if (sidebarToggle && sidebar) {
+function setSidebarOpen(isOpen, restoreFocus = true) {
+    if (!sidebar || !sidebarToggle || !sidebarBackdrop) {
+        return;
+    }
+
+    sidebar.classList.toggle("open", isOpen);
+    sidebarBackdrop.hidden = !isOpen;
+    sidebarToggle.setAttribute("aria-expanded", String(isOpen));
+    sidebarToggle.setAttribute(
+        "aria-label",
+        isOpen ? "Close menu" : "Open menu"
+    );
+    document.body.classList.toggle("menu-open", isOpen);
+
+    if (main) {
+        main.inert = isOpen;
+    }
+
+    if (isOpen) {
+        newChat?.focus();
+    } else if (restoreFocus) {
+        sidebarToggle.focus();
+    }
+}
+
+
+if (sidebarToggle && sidebar && sidebarBackdrop) {
     sidebarToggle.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
+        setSidebarOpen(!sidebar.classList.contains("open"));
+    });
+
+    sidebarBackdrop.addEventListener("click", () => {
+        setSidebarOpen(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && sidebar.classList.contains("open")) {
+            setSidebarOpen(false);
+            return;
+        }
+
+        if (event.key === "Tab" && sidebar.classList.contains("open")) {
+            const menuItems = sidebar.querySelectorAll(
+                "button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled])"
+            );
+
+            if (menuItems.length === 1) {
+                event.preventDefault();
+                menuItems[0].focus();
+            }
+        }
+    });
+
+    window.matchMedia("(min-width: 701px)").addEventListener("change", (event) => {
+        if (event.matches && sidebar.classList.contains("open")) {
+            setSidebarOpen(false, false);
+        }
     });
 }

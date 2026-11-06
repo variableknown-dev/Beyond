@@ -6,14 +6,14 @@
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
 
     <title>Kashvi — AI Assistant</title>
 
     <link
         rel="stylesheet"
-        href="/static/style.css?v=2"
+        href="/static/style.css?v=3"
     >
 </head>
 
@@ -23,7 +23,7 @@
 
     <!-- ================= SIDEBAR ================= -->
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar" aria-label="Chat menu">
 
         <div class="brand">
             <div class="brand-mark">K</div>
@@ -61,6 +61,14 @@
 
     </aside>
 
+    <button
+        id="sidebar-backdrop"
+        class="sidebar-backdrop"
+        type="button"
+        aria-label="Close menu"
+        hidden
+    ></button>
+
 
     <!-- ================= MAIN ================= -->
 
@@ -75,7 +83,10 @@
                 <button
                     id="sidebar-toggle"
                     class="menu-button"
+                    type="button"
                     aria-label="Open menu"
+                    aria-controls="sidebar"
+                    aria-expanded="false"
                 >
                     ☰
                 </button>
