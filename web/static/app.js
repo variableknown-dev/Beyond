@@ -1,7 +1,7 @@
 "use strict";
 
 // =========================================================
-// AARYA — CHAT INTERFACE
+// KASHVI — CHAT INTERFACE
 // =========================================================
 
 const form = document.getElementById("chat-form");
@@ -50,11 +50,11 @@ function addMessage(sender, text, type) {
 
 function createStreamingMessage() {
     const message = document.createElement("div");
-    message.className = "message aarya";
+    message.className = "message kashvi";
 
     const sender = document.createElement("div");
     sender.className = "sender";
-    sender.textContent = "Aarya";
+    sender.textContent = "Kashvi";
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
@@ -79,17 +79,17 @@ function showTyping() {
 
     const message = document.createElement("div");
     message.id = "typing-message";
-    message.className = "message aarya";
+    message.className = "message kashvi";
 
     const sender = document.createElement("div");
     sender.className = "sender";
-    sender.textContent = "Aarya";
+    sender.textContent = "Kashvi";
 
     const typing = document.createElement("div");
     typing.className = "typing";
 
     typing.setAttribute("role", "status");
-    typing.setAttribute("aria-label", "Aarya is thinking");
+    typing.setAttribute("aria-label", "Kashvi is thinking");
 
     for (let i = 0; i < 3; i++) {
         const dot = document.createElement("span");
@@ -185,7 +185,8 @@ async function streamResponse(message) {
     const decoder = new TextDecoder();
 
     let bubble = null;
-    let fullResponse = "";
+    let bubbleText = null;
+    const responseChunks = [];
 
     try {
         while (true) {
@@ -215,10 +216,12 @@ async function streamResponse(message) {
             if (!bubble) {
                 removeTyping();
                 bubble = createStreamingMessage();
+                bubbleText = document.createTextNode("");
+                bubble.appendChild(bubbleText);
             }
 
-            fullResponse += chunk;
-            bubble.textContent = fullResponse;
+            responseChunks.push(chunk);
+            bubbleText.appendData(chunk);
 
             scrollToBottom();
         }
@@ -230,17 +233,21 @@ async function streamResponse(message) {
             if (!bubble && remaining.trim()) {
                 removeTyping();
                 bubble = createStreamingMessage();
+                bubbleText = document.createTextNode("");
+                bubble.appendChild(bubbleText);
             }
 
-            if (bubble) {
-                fullResponse += remaining;
-                bubble.textContent = fullResponse;
+            if (bubbleText) {
+                responseChunks.push(remaining);
+                bubbleText.appendData(remaining);
 
                 scrollToBottom();
             }
         }
 
         // Detect an empty response rather than leaving the UI blank.
+        const fullResponse = responseChunks.join("");
+
         if (!fullResponse.trim()) {
             if (bubble) {
                 bubble.closest(".message")?.remove();
@@ -301,12 +308,12 @@ form.addEventListener("submit", async (event) => {
             return;
         }
 
-        console.error("Aarya streaming error:", error);
+        console.error("Kashvi streaming error:", error);
 
         addMessage(
-            "Aarya",
+            "Kashvi",
             "I'm sorry, something went wrong while processing that. Please try again.",
-            "aarya"
+            "kashvi"
         );
 
     } finally {

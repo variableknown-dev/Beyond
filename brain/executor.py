@@ -13,7 +13,7 @@ def execute_plan(
             List of Task objects.
 
         platform:
-            Current Aarya platform.
+            Current Kashvi platform.
     """
 
     replies = []

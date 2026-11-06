@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from core.aarya import Aarya
+from core.kashvi import Kashvi
 from models.gemini_provider import GeminiProvider
 from web.platform import WebPlatform
 
@@ -24,8 +24,8 @@ load_dotenv()
 # =========================================================
 
 app = FastAPI(
-    title="Aarya",
-    description="Aarya AI Assistant Web Interface",
+    title="Kashvi",
+    description="Kashvi AI Assistant Web Interface",
     version="1.0.0",
 )
 
@@ -44,7 +44,7 @@ app.mount(
 
 
 # =========================================================
-# AARYA
+# KASHVI
 # =========================================================
 
 platform = WebPlatform()
@@ -53,7 +53,7 @@ model_provider = GeminiProvider(
     model="gemini-3.7-flash"
 )
 
-aarya = Aarya(
+kashvi = Kashvi(
     platform=platform,
     model_provider=model_provider,
 )
@@ -95,7 +95,7 @@ async def home():
     "/api/chat",
     response_model=ChatResponse,
 )
-async def chat(request: ChatRequest):
+def chat(request: ChatRequest):
 
     message = request.message.strip()
 
@@ -107,7 +107,7 @@ async def chat(request: ChatRequest):
 
     try:
 
-        response = aarya.chat(
+        response = kashvi.chat(
             message
         )
 
@@ -119,7 +119,7 @@ async def chat(request: ChatRequest):
 
         print()
         print("========================================")
-        print("AARYA NORMAL CHAT ERROR")
+        print("KASHVI NORMAL CHAT ERROR")
         print("========================================")
 
         traceback.print_exc()
@@ -157,7 +157,7 @@ async def chat_stream(request: ChatRequest):
 
         try:
 
-            for chunk in aarya.chat_stream(
+            for chunk in kashvi.chat_stream(
                 message
             ):
 
@@ -169,7 +169,7 @@ async def chat_stream(request: ChatRequest):
 
             print()
             print("========================================")
-            print("AARYA STREAMING CHAT ERROR")
+            print("KASHVI STREAMING CHAT ERROR")
             print("========================================")
 
             traceback.print_exc()

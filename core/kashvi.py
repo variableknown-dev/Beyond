@@ -8,12 +8,12 @@ from brain.memory import init_memory
 from platforms.detector import detect_platform
 
 
-class Aarya:
+class Kashvi:
     """
-    Main interface to the Aarya AI assistant.
+    Main interface to the Kashvi AI assistant.
 
     The model provider and platform are injected,
-    allowing different Aarya installations to use
+    allowing different Kashvi installations to use
     different models and capabilities.
     """
 

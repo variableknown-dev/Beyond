@@ -4,7 +4,7 @@ from datetime import datetime
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
-LOG_FILE = LOG_DIR / "aarya.log"
+LOG_FILE = LOG_DIR / "kashvi.log"
 
 
 def log(category, message):

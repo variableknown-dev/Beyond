@@ -68,7 +68,7 @@ function createStreamingMessage() {
         document.createElement("div");
 
     message.className =
-        "message aarya";
+        "message kashvi";
 
 
     const sender =
@@ -78,7 +78,7 @@ function createStreamingMessage() {
         "sender";
 
     sender.textContent =
-        "Aarya";
+        "Kashvi";
 
 
     const bubble =
@@ -126,7 +126,7 @@ function showTyping() {
         "typing-message";
 
     message.className =
-        "message aarya";
+        "message kashvi";
 
 
     const sender =
@@ -136,7 +136,7 @@ function showTyping() {
         "sender";
 
     sender.textContent =
-        "Aarya";
+        "Kashvi";
 
 
     const typing =
@@ -473,7 +473,7 @@ form.addEventListener(
         } catch (error) {
 
             console.error(
-                "Aarya streaming error:",
+                "Kashvi streaming error:",
                 error
             );
 
@@ -482,9 +482,9 @@ form.addEventListener(
 
 
             addMessage(
-                "Aarya",
+                "Kashvi",
                 "I'm sorry, something went wrong while processing that.",
-                "aarya"
+                "kashvi"
             );
 
         } finally {

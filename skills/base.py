@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class Skill(ABC):
     """
-    Base class for every Aarya skill.
+    Base class for every Kashvi skill.
     """
 
     name = ""

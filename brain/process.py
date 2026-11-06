@@ -1,6 +1,6 @@
 from brain.planner import create_plan
 from brain.executor import execute_plan
-from brain.chat import ask_aarya, stream_aarya
+from brain.chat import ask_kashvi, stream_kashvi
 from brain.context import add_message, get_messages
 
 from brain.parser import extract_memory
@@ -64,7 +64,7 @@ def process(
     # NORMAL MODEL CHAT
     # -----------------------------------------------------
 
-    reply = ask_aarya(
+    reply = ask_kashvi(
         get_messages(),
         model_provider=model_provider,
     )
@@ -139,11 +139,11 @@ def process_stream(
     # STREAM MODEL RESPONSE
     # -----------------------------------------------------
 
-    full_response = ""
+    response_chunks = []
 
     try:
 
-        for chunk in stream_aarya(
+        for chunk in stream_kashvi(
             get_messages(),
             model_provider=model_provider,
         ):
@@ -151,21 +151,26 @@ def process_stream(
             if not chunk:
                 continue
 
-            full_response += chunk
-
+            response_chunks.append(chunk)
             yield chunk
 
     except Exception as error:
 
         print(
-            f"Aarya streaming error: {error}",
+            f"Kashvi streaming error: {error}",
             flush=True,
         )
 
-        yield (
-            "\n\nSorry, I ran into an error "
-            "while generating that response."
-        )
+        if "503" in str(error) or "unavailable" in str(error).lower():
+            yield (
+                "\n\nGemini is temporarily busy. "
+                "Please wait a moment and try again."
+            )
+        else:
+            yield (
+                "\n\nSorry, I ran into an error "
+                "while generating that response."
+            )
 
         return
 
@@ -173,9 +178,9 @@ def process_stream(
     # SAVE RESPONSE
     # -----------------------------------------------------
 
-    if full_response:
+    if response_chunks:
 
         add_message(
             "assistant",
-            full_response,
+            "".join(response_chunks),
         )

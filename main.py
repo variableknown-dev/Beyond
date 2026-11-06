@@ -1,10 +1,10 @@
-from core.aarya import Aarya
+from core.kashvi import Kashvi
 
 
 def main():
-    aarya = Aarya()
+    kashvi = Kashvi()
 
-    print("Aarya is online.")
+    print("Kashvi is online.")
     print("Type 'exit' to quit.\n")
 
     while True:
@@ -15,19 +15,19 @@ def main():
                 continue
 
             if user_input.lower() == "exit":
-                print("Aarya: Goodbye!")
+                print("Kashvi: Goodbye!")
                 break
 
-            reply = aarya.chat(user_input)
+            reply = kashvi.chat(user_input)
 
-            print(f"\nAarya: {reply}\n")
+            print(f"\nKashvi: {reply}\n")
 
         except KeyboardInterrupt:
-            print("\nAarya: Goodbye!")
+            print("\nKashvi: Goodbye!")
             break
 
         except Exception as e:
-            print(f"\nAarya: An error occurred: {e}\n")
+            print(f"\nKashvi: An error occurred: {e}\n")
 
 
 if __name__ == "__main__":

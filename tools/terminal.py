@@ -1,3 +1,4 @@
+import shlex
 import subprocess
 
 
@@ -52,18 +53,25 @@ def run_command(command):
     if not command:
         return False, "No command provided."
 
-    first_word = command.split()[0]
+    try:
+        command_args = shlex.split(command)
+    except ValueError:
+        return False, "The command contains invalid quoting."
+
+    if not command_args:
+        return False, "No command provided."
+
+    first_word = command_args[0]
 
     if first_word not in SAFE_COMMANDS:
         return False, (
             f"'{first_word}' isn't allowed yet.\n"
-            "Aarya currently blocks commands that haven't been approved."
+            "Kashvi currently blocks commands that haven't been approved."
         )
 
     try:
         result = subprocess.run(
-            command,
-            shell=True,
+            command_args,
             capture_output=True,
             text=True,
             timeout=60,

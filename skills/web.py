@@ -1,6 +1,6 @@
 from skills.base import Skill
 from tools.web import search_web
-from brain.chat import ask_aarya
+from brain.chat import ask_kashvi
 
 
 class WebSkill(Skill):
@@ -69,4 +69,4 @@ class WebSkill(Skill):
             }
         ]
 
-        return ask_aarya(messages)
+        return ask_kashvi(messages)
