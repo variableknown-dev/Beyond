@@ -38,6 +38,19 @@ class WebSkill(Skill):
         "recent developments",
         "breaking news",
         "headlines",
+        "bomb",
+        "missile",
+        "attack",
+        "attacked",
+        "airstrike",
+        "drone",
+        "strike",
+        "struck",
+        "war",
+        "conflict",
+        "invasion",
+        "explosion",
+        "ceasefire",
         "score",
         "traffic",
         "schedule",
@@ -75,6 +88,22 @@ class WebSkill(Skill):
         "recent development",
         "breaking news",
         "headline",
+    )
+
+    RECENT_EVENT_TERMS = (
+        "bomb",
+        "missile",
+        "attack",
+        "attacked",
+        "airstrike",
+        "drone",
+        "strike",
+        "struck",
+        "war",
+        "conflict",
+        "invasion",
+        "explosion",
+        "ceasefire",
     )
 
     def can_handle(self, user_input):
@@ -138,6 +167,16 @@ class WebSkill(Skill):
                     flags=re.IGNORECASE,
                 ).strip(" ?.!\t")
                 search_queries = [search_query]
+
+        elif any(term in command for term in self.RECENT_EVENT_TERMS):
+            search_query = re.sub(
+                r"^\s*(?:hi[, ]*)?(?:i heard|i read|someone said|"
+                r"is it true(?: that)?|did you hear)\s+",
+                "",
+                user_input,
+                flags=re.IGNORECASE,
+            ).strip(" ?.!\t")
+            search_queries = [search_query]
 
         if (
             "stock price of gold" in command
