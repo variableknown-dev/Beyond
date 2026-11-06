@@ -57,7 +57,7 @@ class BrowserSkill(Skill):
 
         return False
 
-    def execute(self, user_input):
+    def execute(self, user_input, model_provider=None):
 
         command = user_input.lower().strip()
 

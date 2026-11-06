@@ -32,7 +32,7 @@ class VisionSkill(Skill):
             for prefix in vision_commands
         )
 
-    def execute(self, user_input):
+    def execute(self, user_input, model_provider=None):
 
         command = user_input.strip()
 

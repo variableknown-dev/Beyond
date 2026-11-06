@@ -20,7 +20,7 @@ class TerminalSkill(Skill):
 
         return command.startswith("run ")
 
-    def execute(self, user_input):
+    def execute(self, user_input, model_provider=None):
 
         command = user_input[4:].strip()
 

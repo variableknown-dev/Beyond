@@ -4,6 +4,7 @@ from brain.router import route
 def execute_plan(
     tasks,
     platform=None,
+    model_provider=None,
 ):
     """
     Execute each task in order.
@@ -14,6 +15,9 @@ def execute_plan(
 
         platform:
             Current Kashvi platform.
+
+        model_provider:
+            Provider used to summarize web search results.
     """
 
     replies = []
@@ -23,6 +27,7 @@ def execute_plan(
         reply = route(
             task.text,
             platform=platform,
+            model_provider=model_provider,
         )
 
         if reply is None:

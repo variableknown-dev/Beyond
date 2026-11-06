@@ -41,7 +41,7 @@ class ApplicationSkill(Skill):
 
         return app in KNOWN_APPS
 
-    def execute(self, user_input):
+    def execute(self, user_input, model_provider=None):
 
         app = user_input[5:].strip()
 

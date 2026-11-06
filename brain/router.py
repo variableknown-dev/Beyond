@@ -4,6 +4,7 @@ from brain.skill_loader import load_skills
 def route(
     user_input,
     platform=None,
+    model_provider=None,
 ):
     """
     Route a request to the appropriate skill.
@@ -31,6 +32,6 @@ def route(
                         f"{platform.name}."
                     )
 
-        return skill.execute(user_input)
+        return skill.execute(user_input, model_provider=model_provider)
 
     return None

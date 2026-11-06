@@ -18,5 +18,5 @@ class Skill(ABC):
         pass
 
     @abstractmethod
-    def execute(self, user_input):
+    def execute(self, user_input, model_provider=None):
         pass

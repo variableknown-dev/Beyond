@@ -49,6 +49,7 @@ def process(
     reply = execute_plan(
         plan,
         platform=platform,
+        model_provider=model_provider,
     )
 
     if reply and reply.strip():
@@ -122,6 +123,7 @@ def process_stream(
     reply = execute_plan(
         plan,
         platform=platform,
+        model_provider=model_provider,
     )
 
     if reply and reply.strip():
