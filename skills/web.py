@@ -1,3 +1,5 @@
+import re
+
 from skills.base import Skill
 from tools.web import search_web
 from brain.chat import ask_kashvi
@@ -65,6 +67,16 @@ class WebSkill(Skill):
         "research ",
     )
 
+    CURRENT_AFFAIRS_CUES = (
+        "current affair",
+        "latest update",
+        "recent update",
+        "latest development",
+        "recent development",
+        "breaking news",
+        "headline",
+    )
+
     def can_handle(self, user_input):
 
         command = user_input.lower().strip()
@@ -86,6 +98,32 @@ class WebSkill(Skill):
 
         command = user_input.lower()
         search_query = user_input
+
+        if any(cue in command for cue in self.CURRENT_AFFAIRS_CUES):
+            between_entities = re.search(
+                r"\bbetween\s+(.+?)\s+and\s+(.+?)(?:[?.!,;]|$)",
+                command,
+            )
+
+            if between_entities:
+                first, second = (
+                    entity.strip(" \t\r\n'\"()")
+                    for entity in between_entities.groups()
+                )
+                search_query = f"latest news {first} {second} relations"
+            else:
+                search_query = re.sub(
+                    r"^\s*(?:hi[, ]*)?(?:can|could|would) you "
+                    r"(?:please )?(?:tell me|give me|show me) "
+                    r"(?:about |the latest on )?",
+                    "",
+                    user_input,
+                    flags=re.IGNORECASE,
+                )
+                search_query = re.sub(
+                    r"current affairs?", "latest news", search_query,
+                    flags=re.IGNORECASE,
+                ).strip(" ?.!\t")
 
         if (
             "stock price of gold" in command
