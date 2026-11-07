@@ -31,6 +31,13 @@ class WebSkill(Skill):
         "weather",
         "forecast",
         "news",
+        "current events",
+        "latest news",
+        "recent news",
+        "what happened",
+        "what is happening",
+        "what's happening",
+        "whats happening",
         "current affairs",
         "latest update",
         "recent update",
@@ -82,6 +89,13 @@ class WebSkill(Skill):
 
     CURRENT_AFFAIRS_CUES = (
         "current affair",
+        "current event",
+        "latest news",
+        "recent news",
+        "what happened",
+        "what is happening",
+        "what's happening",
+        "whats happening",
         "latest update",
         "recent update",
         "latest development",
@@ -127,6 +141,10 @@ class WebSkill(Skill):
 
         command = user_input.lower()
         search_queries = [user_input]
+        is_news_query = (
+            any(cue in command for cue in self.CURRENT_AFFAIRS_CUES)
+            or any(term in command for term in self.RECENT_EVENT_TERMS)
+        )
 
         if any(cue in command for cue in self.CURRENT_AFFAIRS_CUES):
             between_entities = re.search(
@@ -155,18 +173,48 @@ class WebSkill(Skill):
                 ]
             else:
                 search_query = re.sub(
-                    r"^\s*(?:hi[, ]*)?(?:can|could|would) you "
-                    r"(?:please )?(?:tell me|give me|show me) "
-                    r"(?:about |the latest on )?",
+                    r"^\s*(?:hi|hey|ok|okay)[, ]*",
                     "",
                     user_input,
                     flags=re.IGNORECASE,
                 )
                 search_query = re.sub(
+                    r"^\s*(?:(?:can|could|would) you\s+)?"
+                    r"(?:please\s+)?(?:tell me|give me|show me)\s+"
+                    r"(?:about\s+)?",
+                    "",
+                    search_query,
+                    flags=re.IGNORECASE,
+                )
+                search_query = re.sub(
                     r"current affairs?", "latest news", search_query,
                     flags=re.IGNORECASE,
+                )
+                search_query = re.sub(
+                    r"\b(?:latest|recent) (?:updates?|developments?)\b",
+                    "latest news",
+                    search_query,
+                    flags=re.IGNORECASE,
+                )
+                search_query = re.sub(
+                    r"\b(latest news)\s+(?:of|in|about)\s+",
+                    r"\1 ",
+                    search_query,
+                    flags=re.IGNORECASE,
                 ).strip(" ?.!\t")
+                search_query = re.sub(
+                    r"^the\s+(?=latest news\b)",
+                    "",
+                    search_query,
+                    flags=re.IGNORECASE,
+                )
                 search_queries = [search_query]
+                if search_query.lower().startswith("latest news "):
+                    topic = search_query[len("latest news "):].strip()
+                    if topic:
+                        search_queries.append(
+                            f"{topic} news politics government economy"
+                        )
 
         elif any(term in command for term in self.RECENT_EVENT_TERMS):
             search_query = re.sub(
@@ -191,7 +239,11 @@ class WebSkill(Skill):
         seen_results = set()
 
         for search_query in search_queries:
-            success, search_results = search_web(search_query)
+            success, search_results = search_web(
+                search_query,
+                max_results=8,
+                search_type="news" if is_news_query else "text",
+            )
 
             if not success:
                 errors.append(str(search_results))
@@ -218,6 +270,8 @@ class WebSkill(Skill):
             context += (
                 f"{i}.\n"
                 f"Title: {result['title']}\n"
+                f"Source: {result.get('source', '')}\n"
+                f"Published: {result.get('date', '')}\n"
                 f"Summary: {result['body']}\n"
                 f"URL: {result['url']}\n\n"
             )
@@ -240,6 +294,13 @@ class WebSkill(Skill):
                     "parties and their interaction; do not substitute unrelated "
                     "domestic news about only one. If the results cover one side "
                     "poorly, state that limitation instead of guessing. "
+                    "For country-specific news, verify that the reports actually "
+                    "concern the country the user named. Do not substitute stories "
+                    "about a different country; if the results are unrelated, say "
+                    "that relevant coverage was not found. "
+                    "Prioritize the newest results and include publication dates. "
+                    "Do not present older reports as current; for a specifically "
+                    "dated event, use reports that match that date. "
                     "For time-sensitive facts, include the result date or "
                     "time when available. For prices, state the currency "
                     "and unit and distinguish spot commodities from company "
