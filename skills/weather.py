@@ -1,7 +1,7 @@
 import re
 
 from skills.base import Skill
-from tools.weather import get_weather
+from tools.weather import WeatherAPIConfigurationError, get_weather
 
 
 class WeatherSkill(Skill):
@@ -13,20 +13,9 @@ class WeatherSkill(Skill):
         "weather", "forecast", "temperature", "how hot", "how cold",
         "will it rain", "is it raining", "humidity", "wind speed",
     )
-    CONDITION_CODES = {
-        0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-        45: "Fog", 48: "Rime fog", 51: "Light drizzle", 53: "Drizzle",
-        55: "Heavy drizzle", 56: "Freezing drizzle", 57: "Heavy freezing drizzle",
-        61: "Light rain", 63: "Rain", 65: "Heavy rain", 66: "Freezing rain",
-        67: "Heavy freezing rain", 71: "Light snow", 73: "Snow", 75: "Heavy snow",
-        77: "Snow grains", 80: "Light rain showers", 81: "Rain showers",
-        82: "Heavy rain showers", 85: "Snow showers", 86: "Heavy snow showers",
-        95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Severe thunderstorm with hail",
-    }
 
     def can_handle(self, user_input):
-        text = user_input.lower()
-        return any(cue in text for cue in self.WEATHER_CUES)
+        return any(cue in user_input.lower() for cue in self.WEATHER_CUES)
 
     @staticmethod
     def _location(text):
@@ -34,8 +23,14 @@ class WeatherSkill(Skill):
         if not match:
             return None
         location = match.group(1).strip(" \t\n'\"")
-        location = re.sub(r"\b(?:right now|today|tomorrow|this week|this weekend)\b", "", location, flags=re.I)
-        location = re.sub(r"\b(?:in|degrees?)\s+(?:celsius|fahrenheit|centigrade)\b", "", location, flags=re.I)
+        location = re.sub(
+            r"\b(?:right now|today|tomorrow|this week|this weekend)\b",
+            "", location, flags=re.I,
+        )
+        location = re.sub(
+            r"\b(?:in|degrees?)\s+(?:celsius|fahrenheit|centigrade)\b",
+            "", location, flags=re.I,
+        )
         location = re.sub(r"\b(?:celsius|fahrenheit|centigrade)\b", "", location, flags=re.I)
         return location.strip(" ,") or None
 
@@ -45,10 +40,12 @@ class WeatherSkill(Skill):
             return "Which city or place should I check the weather for?"
 
         text = user_input.lower()
-        unit = "fahrenheit" if "fahrenheit" in text or re.search(r"\b(?:°f|\bf)\b", text) else "celsius"
-        include_forecast = "forecast" in text or "tomorrow" in text or "next few days" in text
+        unit = "fahrenheit" if "fahrenheit" in text or re.search(r"\b(?:°f|f)\b", text) else "celsius"
+        include_forecast = any(cue in text for cue in ("forecast", "tomorrow", "next few days"))
         try:
             result = get_weather(location, temperature_unit=unit, include_forecast=include_forecast)
+        except WeatherAPIConfigurationError:
+            return "Weather is not configured yet. Add a WeatherAPI.com key as WEATHERAPI_KEY in the server environment."
         except Exception:
             return "I couldn't retrieve weather data just now. Please try again shortly."
 
@@ -56,34 +53,37 @@ class WeatherSkill(Skill):
             return f"I couldn't find a weather location matching {location!r}. Try a city and country, such as ‘Pune, India’."
 
         place, data = result["place"], result["data"]
+        unit_suffix = "°F" if unit == "fahrenheit" else "°C"
         place_name = ", ".join(part for part in (place["name"], place.get("admin1"), place.get("country")) if part)
         current = data.get("current", {})
-        temp_unit = data.get("current_units", {}).get("temperature_2m", "°C")
-        wind_unit = data.get("current_units", {}).get("wind_speed_10m", "km/h")
-        code = current.get("weather_code")
-        lines = [f"Weather for {place_name} ({data.get('timezone', place.get('timezone', 'local time'))}):"]
-        if current:
-            lines.append(
-                f"Now: {self.CONDITION_CODES.get(code, 'Conditions unavailable')}, "
-                f"{current.get('temperature_2m', '—')}{temp_unit}; feels like "
-                f"{current.get('apparent_temperature', '—')}{temp_unit}."
-            )
-            lines.append(
-                f"Humidity: {current.get('relative_humidity_2m', '—')}%; "
-                f"wind: {current.get('wind_speed_10m', '—')} {wind_unit}; "
-                f"precipitation: {current.get('precipitation', '—')} mm."
-            )
-            lines.append(f"Updated at {current.get('time', 'the latest available reading')} local time.")
+        condition = current.get("condition", {}).get("text", "Conditions unavailable")
+        temp = current.get("temp_f" if unit == "fahrenheit" else "temp_c", "—")
+        feels = current.get("feelslike_f" if unit == "fahrenheit" else "feelslike_c", "—")
+        lines = [f"Weather for {place_name} ({place.get('timezone', 'local time')}):"]
+        lines.append(f"Now: {condition}, {temp}{unit_suffix}; feels like {feels}{unit_suffix}.")
+        lines.append(
+            f"Humidity: {current.get('humidity', '—')}%; wind: "
+            f"{current.get('wind_kph', '—')} km/h; precipitation: "
+            f"{current.get('precip_mm', '—')} mm."
+        )
+        lines.append(f"Updated at {current.get('last_updated', 'the latest available reading')} local time.")
 
-        daily = data.get("daily", {})
-        if daily:
+        forecast_days = data.get("forecast", {}).get("forecastday", [])
+        if forecast_days:
             lines.append("Forecast:")
-            for i, day in enumerate(daily.get("time", [])):
-                daily_code = daily.get("weather_code", [None] * (i + 1))[i]
-                low = daily.get("temperature_2m_min", [None] * (i + 1))[i]
-                high = daily.get("temperature_2m_max", [None] * (i + 1))[i]
-                rain = daily.get("precipitation_probability_max", [None] * (i + 1))[i]
-                rain_text = f", precipitation chance up to {rain}%" if rain is not None else ""
-                lines.append(f"{day}: {self.CONDITION_CODES.get(daily_code, 'Conditions unavailable')}, {low}–{high}{temp_unit}{rain_text}.")
-        lines.append("Source: [Open-Meteo](https://open-meteo.com/), licensed under CC BY 4.0.")
+            for forecast in forecast_days:
+                day = forecast.get("day", {})
+                high = day.get("maxtemp_f" if unit == "fahrenheit" else "maxtemp_c", "—")
+                low = day.get("mintemp_f" if unit == "fahrenheit" else "mintemp_c", "—")
+                condition = day.get("condition", {}).get("text", "Conditions unavailable")
+                rain = day.get("daily_chance_of_rain")
+                rain_text = f", chance of rain {rain}%" if rain is not None else ""
+                lines.append(f"{forecast.get('date')}: {condition}, {low}–{high}{unit_suffix}{rain_text}.")
+
+        lines.append("Source: [WeatherAPI.com](https://www.weatherapi.com/).")
+        lines.append(
+            "Weather information is for general information only; forecasts may be inaccurate "
+            "for your specific place or time. Do not rely on it alone for safety-critical "
+            "decisions; consult official meteorological services."
+        )
         return "\n".join(lines)

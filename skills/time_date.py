@@ -4,6 +4,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from skills.base import Skill
+from tools.weather import WeatherAPIConfigurationError
 
 
 class TimeDateSkill(Skill):
@@ -51,7 +52,11 @@ class TimeDateSkill(Skill):
         asks_date = any(cue in text for cue in self.DATE_CUES)
         try:
             zone, label = self._zone_for(user_input)
-        except (ValueError, ZoneInfoNotFoundError):
+        except WeatherAPIConfigurationError as error:
+            return str(error)
+        except ValueError:
+            return "I couldn't identify that timezone or location. Try a city name or an IANA timezone such as Asia/Dubai."
+        except ZoneInfoNotFoundError:
             return "I couldn't identify that timezone or location. Try a city name or an IANA timezone such as Asia/Dubai."
 
         now = datetime.now(zone)
