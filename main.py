@@ -1,10 +1,10 @@
-from core.kashvi import Kashvi
+from core.beyond import Beyond
 
 
 def main():
-    kashvi = Kashvi()
+    beyond = Beyond()
 
-    print("Kashvi is online.")
+    print("Beyond is online.")
     print("Type 'exit' to quit.\n")
 
     while True:
@@ -15,19 +15,19 @@ def main():
                 continue
 
             if user_input.lower() == "exit":
-                print("Kashvi: Goodbye!")
+                print("Beyond: Goodbye!")
                 break
 
-            reply = kashvi.chat(user_input)
+            reply = beyond.chat(user_input)
 
-            print(f"\nKashvi: {reply}\n")
+            print(f"\nBeyond: {reply}\n")
 
         except KeyboardInterrupt:
-            print("\nKashvi: Goodbye!")
+            print("\nBeyond: Goodbye!")
             break
 
         except Exception as e:
-            print(f"\nKashvi: An error occurred: {e}\n")
+            print(f"\nBeyond: An error occurred: {e}\n")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 "use strict";
 
 // =========================================================
-// KASHVI — CHAT INTERFACE
+// BEYOND — CHAT INTERFACE
 // =========================================================
 
 const form = document.getElementById("chat-form");
@@ -53,11 +53,11 @@ function addMessage(sender, text, type) {
 
 function createStreamingMessage() {
     const message = document.createElement("div");
-    message.className = "message kashvi";
+    message.className = "message beyond";
 
     const sender = document.createElement("div");
     sender.className = "sender";
-    sender.textContent = "Kashvi";
+    sender.textContent = "Beyond";
 
     const bubble = document.createElement("div");
     bubble.className = "bubble";
@@ -82,17 +82,17 @@ function showTyping() {
 
     const message = document.createElement("div");
     message.id = "typing-message";
-    message.className = "message kashvi";
+    message.className = "message beyond";
 
     const sender = document.createElement("div");
     sender.className = "sender";
-    sender.textContent = "Kashvi";
+    sender.textContent = "Beyond";
 
     const typing = document.createElement("div");
     typing.className = "typing";
 
     typing.setAttribute("role", "status");
-    typing.setAttribute("aria-label", "Kashvi is thinking");
+    typing.setAttribute("aria-label", "Beyond is thinking");
 
     for (let i = 0; i < 3; i++) {
         const dot = document.createElement("span");
@@ -311,12 +311,12 @@ form.addEventListener("submit", async (event) => {
             return;
         }
 
-        console.error("Kashvi streaming error:", error);
+        console.error("Beyond streaming error:", error);
 
         addMessage(
-            "Kashvi",
+            "Beyond",
             serviceErrorMessage,
-            "kashvi"
+            "beyond"
         );
 
     } finally {

@@ -43,7 +43,7 @@ class TimeDateSkill(Skill):
             timezone = place["timezone"]
             return ZoneInfo(timezone), f"{place['name']}, {place['country']} ({timezone})"
 
-        timezone = os.getenv("KASHVI_DEFAULT_TIMEZONE", "Asia/Kolkata")
+        timezone = os.getenv("BEYOND_DEFAULT_TIMEZONE", "Asia/Kolkata")
         return ZoneInfo(timezone), timezone
 
     def execute(self, user_input, model_provider=None):

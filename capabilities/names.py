@@ -1,11 +1,11 @@
 """
-Kashvi capability definitions.
+Beyond capability definitions.
 
 Every platform advertises the capabilities it supports.
 
 Every skill declares the capabilities it requires.
 
-This allows one Kashvi brain to run everywhere while
+This allows one Beyond brain to run everywhere while
 automatically enabling or disabling features.
 """
 

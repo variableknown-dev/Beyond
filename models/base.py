@@ -5,7 +5,7 @@ class ModelProvider(ABC):
     """
     Base interface for all AI model providers.
 
-    Every model backend used by Kashvi should implement
+    Every model backend used by Beyond should implement
     this interface.
     """
 

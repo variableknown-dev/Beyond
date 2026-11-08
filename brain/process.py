@@ -1,6 +1,6 @@
 from brain.planner import create_plan
 from brain.executor import execute_plan
-from brain.chat import ask_kashvi, stream_kashvi
+from brain.chat import ask_beyond, stream_beyond
 from brain.context import add_message, get_messages
 
 from brain.parser import extract_memory
@@ -65,7 +65,7 @@ def process(
     # NORMAL MODEL CHAT
     # -----------------------------------------------------
 
-    reply = ask_kashvi(
+    reply = ask_beyond(
         get_messages(),
         model_provider=model_provider,
     )
@@ -145,7 +145,7 @@ def process_stream(
 
     try:
 
-        for chunk in stream_kashvi(
+        for chunk in stream_beyond(
             get_messages(),
             model_provider=model_provider,
         ):
@@ -159,7 +159,7 @@ def process_stream(
     except Exception as error:
 
         print(
-            f"Kashvi streaming error: {error}",
+            f"Beyond streaming error: {error}",
             flush=True,
         )
 

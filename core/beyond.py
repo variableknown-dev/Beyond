@@ -8,12 +8,12 @@ from brain.memory import init_memory
 from platforms.detector import detect_platform
 
 
-class Kashvi:
+class Beyond:
     """
-    Main interface to the Kashvi AI assistant.
+    Main interface to the Beyond AI assistant.
 
     The model provider and platform are injected,
-    allowing different Kashvi installations to use
+    allowing different Beyond installations to use
     different models and capabilities.
     """
 

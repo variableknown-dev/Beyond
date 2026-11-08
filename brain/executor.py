@@ -1,5 +1,5 @@
 from brain.router import route
-from brain.chat import ask_kashvi
+from brain.chat import ask_beyond
 
 
 def execute_plan(
@@ -15,7 +15,7 @@ def execute_plan(
             List of Task objects.
 
         platform:
-            Current Kashvi platform.
+            Current Beyond platform.
 
         model_provider:
             Provider used to summarize web search results.
@@ -36,7 +36,7 @@ def execute_plan(
             # When a compound request contains a part with no dedicated skill,
             # answer that part separately instead of silently dropping it.
             if len(tasks) > 1:
-                reply = ask_kashvi(
+                reply = ask_beyond(
                     [{
                         "role": "user",
                         "content": (

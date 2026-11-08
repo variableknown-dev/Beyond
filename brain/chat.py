@@ -14,7 +14,7 @@ DEFAULT_MODEL = OllamaProvider(
 # NORMAL CHAT
 # =========================================================
 
-def ask_kashvi(
+def ask_beyond(
     messages,
     model_provider=None,
 ):
@@ -31,7 +31,7 @@ def ask_kashvi(
 # STREAMING CHAT
 # =========================================================
 
-def stream_kashvi(
+def stream_beyond(
     messages,
     model_provider=None,
 ):

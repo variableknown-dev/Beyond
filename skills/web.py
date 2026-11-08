@@ -2,7 +2,7 @@ import re
 
 from skills.base import Skill
 from tools.web import search_web
-from brain.chat import ask_kashvi
+from brain.chat import ask_beyond
 
 
 class WebSkill(Skill):
@@ -124,7 +124,7 @@ class WebSkill(Skill):
 
         command = user_input.lower().strip()
 
-        # The dedicated Weather skill handles forecasts directly from Open-Meteo.
+        # The dedicated Weather skill handles weather requests.
         if any(term in command for term in ("weather", "forecast")):
             return False
 
@@ -317,4 +317,4 @@ class WebSkill(Skill):
             }
         ]
 
-        return ask_kashvi(messages, model_provider=model_provider)
+        return ask_beyond(messages, model_provider=model_provider)

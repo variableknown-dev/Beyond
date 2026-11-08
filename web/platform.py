@@ -10,7 +10,7 @@ from platforms.base import Platform
 
 class WebPlatform(Platform):
     """
-    Platform implementation for Kashvi's web version.
+    Platform implementation for Beyond's web version.
 
     Only web-safe capabilities are exposed here.
     """

@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Str
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from core.kashvi import Kashvi
+from core.beyond import Beyond
 from models.gemini_provider import GeminiProvider
 from web.platform import WebPlatform
 
@@ -24,8 +24,8 @@ load_dotenv()
 # =========================================================
 
 app = FastAPI(
-    title="Kashvi",
-    description="Kashvi AI Assistant Web Interface",
+    title="Beyond",
+    description="Beyond AI Assistant Web Interface",
     version="1.0.0",
 )
 
@@ -61,7 +61,7 @@ async def handle_unexpected_error(request: Request, error: Exception):
 
 
 # =========================================================
-# KASHVI
+# BEYOND
 # =========================================================
 
 platform = WebPlatform()
@@ -70,7 +70,7 @@ model_provider = GeminiProvider(
     model="gemini-3.5-flash-lite"
 )
 
-kashvi = Kashvi(
+beyond = Beyond(
     platform=platform,
     model_provider=model_provider,
 )
@@ -125,7 +125,7 @@ def chat(request: ChatRequest):
 
     try:
 
-        response = kashvi.chat(
+        response = beyond.chat(
             message
         )
 
@@ -137,7 +137,7 @@ def chat(request: ChatRequest):
 
         print()
         print("========================================")
-        print("KASHVI NORMAL CHAT ERROR")
+        print("BEYOND NORMAL CHAT ERROR")
         print("========================================")
 
         traceback.print_exc()
@@ -173,7 +173,7 @@ async def chat_stream(request: ChatRequest):
 
         try:
 
-            for chunk in kashvi.chat_stream(
+            for chunk in beyond.chat_stream(
                 message
             ):
 
@@ -185,7 +185,7 @@ async def chat_stream(request: ChatRequest):
 
             print()
             print("========================================")
-            print("KASHVI STREAMING CHAT ERROR")
+            print("BEYOND STREAMING CHAT ERROR")
             print("========================================")
 
             traceback.print_exc()

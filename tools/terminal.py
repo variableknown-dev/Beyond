@@ -66,7 +66,7 @@ def run_command(command):
     if first_word not in SAFE_COMMANDS:
         return False, (
             f"'{first_word}' isn't allowed yet.\n"
-            "Kashvi currently blocks commands that haven't been approved."
+            "Beyond currently blocks commands that haven't been approved."
         )
 
     try:
