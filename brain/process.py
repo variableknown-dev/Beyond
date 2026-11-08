@@ -43,7 +43,8 @@ def process(
     # -----------------------------------------------------
 
     plan = create_plan(
-        user_input
+        user_input,
+        history=get_messages(),
     )
 
     reply = execute_plan(
@@ -117,7 +118,8 @@ def process_stream(
     # -----------------------------------------------------
 
     plan = create_plan(
-        user_input
+        user_input,
+        history=get_messages(),
     )
 
     reply = execute_plan(
