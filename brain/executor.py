@@ -1,4 +1,5 @@
 from brain.router import route
+from brain.chat import ask_kashvi
 
 
 def execute_plan(
@@ -32,10 +33,31 @@ def execute_plan(
 
         if reply is None:
 
-            task.success = False
-            task.completed = True
-            task.result = ""
+            # When a compound request contains a part with no dedicated skill,
+            # answer that part separately instead of silently dropping it.
+            if len(tasks) > 1:
+                reply = ask_kashvi(
+                    [{
+                        "role": "user",
+                        "content": (
+                            "Answer only this part of the user's multi-part request. "
+                            "Do not repeat or answer the other parts:\n"
+                            f"{task.text}"
+                        ),
+                    }],
+                    model_provider=model_provider,
+                )
 
+            if not reply:
+                task.success = False
+                task.completed = True
+                task.result = ""
+                continue
+
+            task.success = True
+            task.completed = True
+            task.result = reply
+            replies.append(reply)
             continue
 
         task.success = True
