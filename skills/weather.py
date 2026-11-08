@@ -85,5 +85,5 @@ class WeatherSkill(Skill):
                 rain = daily.get("precipitation_probability_max", [None] * (i + 1))[i]
                 rain_text = f", precipitation chance up to {rain}%" if rain is not None else ""
                 lines.append(f"{day}: {self.CONDITION_CODES.get(daily_code, 'Conditions unavailable')}, {low}–{high}{temp_unit}{rain_text}.")
-        lines.append("Source: Open-Meteo (CC BY 4.0).")
+        lines.append("Source: [Open-Meteo](https://open-meteo.com/), licensed under CC BY 4.0.")
         return "\n".join(lines)
