@@ -19,6 +19,46 @@ def _is_skill_request(text, skills):
     return any(skill.can_handle(text) for skill in skills)
 
 
+def _weather_location_followup(user_input, history):
+    """Resume a weather lookup when the user supplies the requested place."""
+
+    location = user_input.strip().strip(" \t\r\n.,!?;:'\"()")
+    if not location or len(location) > 80:
+        return None
+
+    # A place-only response should not contain another request or a question.
+    if re.search(r"[?!\n]", location):
+        return None
+    if re.search(r"\b(?:weather|forecast|time|date|temperature|rain|snow)\b", location, re.I):
+        return None
+
+    if len(history) < 3:
+        return None
+
+    previous_assistant = history[-2]
+    previous_user = next(
+        (message for message in reversed(history[:-2]) if message.get("role") == "user"),
+        None,
+    )
+    if not previous_assistant or previous_assistant.get("role") != "assistant" or not previous_user:
+        return None
+
+    asked_for_place = re.search(
+        r"\bwhich\s+(?:city|place|location)\b|\bwhat\s+(?:city|place|location)\b",
+        previous_assistant.get("content", ""),
+        re.I,
+    )
+    asked_about_weather = re.search(
+        r"\b(?:weather|forecast|temperature|rain|snow)\b",
+        previous_user.get("content", ""),
+        re.I,
+    )
+    if asked_for_place and asked_about_weather:
+        return f"weather in {location}"
+
+    return None
+
+
 def _split_supported_compounds(text, skills):
     """Split coordinated clauses only when each side has a matching skill."""
 
@@ -70,12 +110,16 @@ def _share_location_context(parts):
     return updated
 
 
-def create_plan(user_input):
+def create_plan(user_input, history=None):
     """
     Very simple planner.
 
     Splits multiple requests into tasks.
     """
+
+    followup = _weather_location_followup(user_input, history or [])
+    if followup:
+        user_input = followup
 
     text = re.sub(
         r"^\s*(?:hi|hey|ok|okay)[, ]+",
