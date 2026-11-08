@@ -80,6 +80,7 @@ class ChatResponse(BaseModel):
 # =========================================================
 
 @app.get("/")
+@app.head("/")
 async def home():
 
     return FileResponse(
