@@ -13,8 +13,16 @@ class TimeDateSkill(Skill):
     required_capabilities = set()
 
     WEATHER_TERMS = ("weather", "forecast", "rain", "snow", "temperature", "wind")
-    TIME_CUES = ("what time", "what is the time", "current time", "time is it", "time in ", "time at ", "local time")
-    DATE_CUES = ("what date", "what is the date", "today's date", "todays date", "current date", "date is it", "what day", "which day", "today's day")
+    TIME_CUES = (
+        "what time", "what is the time", "what's the time", "whats the time",
+        "tell me the time", "current time", "time right now", "time is it",
+        "time in ", "time at ", "local time",
+    )
+    DATE_CUES = (
+        "what date", "what is the date", "what's the date", "whats the date",
+        "today's date", "todays date", "current date", "date is it",
+        "what day", "which day", "today's day",
+    )
 
     def can_handle(self, user_input):
         text = user_input.lower()
