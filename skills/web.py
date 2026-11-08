@@ -124,6 +124,10 @@ class WebSkill(Skill):
 
         command = user_input.lower().strip()
 
+        # The dedicated Weather skill handles forecasts directly from Open-Meteo.
+        if any(term in command for term in ("weather", "forecast")):
+            return False
+
         has_freshness_cue = any(
             cue in command for cue in self.FRESHNESS_CUES
         )
