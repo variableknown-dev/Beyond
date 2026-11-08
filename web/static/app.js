@@ -18,6 +18,7 @@ const newChat = document.getElementById("new-chat");
 
 let waiting = false;
 let activeController = null;
+const serviceErrorMessage = "Sorry, but we are currently experiencing a few errors in our code. We are working to resolve them promptly. We apologize for the inconvenience.";
 
 
 // =========================================================
@@ -314,7 +315,7 @@ form.addEventListener("submit", async (event) => {
 
         addMessage(
             "Kashvi",
-            "I'm sorry, something went wrong while processing that. Please try again.",
+            serviceErrorMessage,
             "kashvi"
         );
 

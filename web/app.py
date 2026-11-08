@@ -2,8 +2,8 @@ from pathlib import Path
 import traceback
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -35,12 +35,29 @@ app = FastAPI(
 # =========================================================
 
 STATIC_DIR = Path(__file__).parent / "static"
+ERROR_PAGE = STATIC_DIR / "error.html"
+ERROR_MESSAGE = (
+    "Sorry, but we are currently experiencing a few errors in our code. "
+    "We are working to resolve them promptly. We apologize for the inconvenience."
+)
 
 app.mount(
     "/static",
     StaticFiles(directory=STATIC_DIR),
     name="static",
 )
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_error(request: Request, error: Exception):
+    """Show a helpful fallback page for errors while the app is running."""
+
+    traceback.print_exception(type(error), error, error.__traceback__)
+
+    if request.url.path.startswith("/api/"):
+        return PlainTextResponse(ERROR_MESSAGE, status_code=503)
+
+    return FileResponse(ERROR_PAGE, status_code=503)
 
 
 # =========================================================
@@ -128,11 +145,9 @@ def chat(request: ChatRequest):
         print("========================================")
         print()
 
-        return ChatResponse(
-            response=(
-                "Sorry, I ran into an error "
-                "while generating that response."
-            )
+        return JSONResponse(
+            status_code=503,
+            content={"response": ERROR_MESSAGE},
         )
 
 
@@ -178,11 +193,7 @@ async def chat_stream(request: ChatRequest):
             print("========================================")
             print()
 
-            yield (
-                "\n\nSorry, I ran into "
-                "an error while generating "
-                "that response."
-            )
+            yield f"\n\n{ERROR_MESSAGE}"
 
     return StreamingResponse(
         generate(),
