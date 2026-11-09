@@ -16,6 +16,19 @@ DATA_DIR.mkdir(
 
 DB_NAME = DATA_DIR / "memory.db"
 
+_CREATE_MEMORIES_SQL = """
+    CREATE TABLE {table_name} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        memory_key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(session_id, category, memory_key)
+    )
+"""
+
 
 # =========================================================
 # INITIALIZE MEMORY
@@ -27,17 +40,31 @@ def init_memory():
 
     cursor = conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL,
-            memory_key TEXT NOT NULL,
-            value TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            UNIQUE(category, memory_key)
-        )
-    """)
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='memories'"
+    )
+    table_exists = cursor.fetchone() is not None
+
+    if not table_exists:
+        cursor.execute(_CREATE_MEMORIES_SQL.format(table_name="memories"))
+    else:
+        cursor.execute("PRAGMA table_info(memories)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        if "session_id" not in columns:
+            # Keep existing single-user memories under the local CLI session,
+            # while moving the unique key to include the session identifier.
+            cursor.execute(
+                _CREATE_MEMORIES_SQL.format(table_name="memories_migrated")
+            )
+            cursor.execute("""
+                INSERT INTO memories_migrated
+                    (id, session_id, category, memory_key, value, created_at, updated_at)
+                SELECT id, 'local', category, memory_key, value, created_at, updated_at
+                FROM memories
+            """)
+            cursor.execute("DROP TABLE memories")
+            cursor.execute("ALTER TABLE memories_migrated RENAME TO memories")
 
     conn.commit()
     conn.close()
@@ -47,7 +74,7 @@ def init_memory():
 # REMEMBER
 # =========================================================
 
-def remember(category, key, value):
+def remember(category, key, value, session_id="local"):
     """
     Creates or updates a memory.
     """
@@ -62,14 +89,15 @@ def remember(category, key, value):
 
     cursor.execute("""
         INSERT INTO memories
-        (category, memory_key, value, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)
+        (session_id, category, memory_key, value, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
 
-        ON CONFLICT(category, memory_key)
+        ON CONFLICT(session_id, category, memory_key)
         DO UPDATE SET
             value = excluded.value,
             updated_at = excluded.updated_at
     """, (
+        str(session_id),
         category,
         key,
         value,
@@ -85,7 +113,7 @@ def remember(category, key, value):
 # RECALL
 # =========================================================
 
-def recall(category=None):
+def recall(category=None, session_id="local"):
     """
     Returns all memories, or only one category.
     """
@@ -99,17 +127,18 @@ def recall(category=None):
         cursor.execute("""
             SELECT category, memory_key, value
             FROM memories
+            WHERE session_id=?
             ORDER BY category, memory_key
-        """)
+        """, (str(session_id),))
 
     else:
 
         cursor.execute("""
             SELECT category, memory_key, value
             FROM memories
-            WHERE category=?
+            WHERE session_id=? AND category=?
             ORDER BY memory_key
-        """, (category,))
+        """, (str(session_id), category))
 
     rows = cursor.fetchall()
 
@@ -122,7 +151,7 @@ def recall(category=None):
 # GET ONE MEMORY
 # =========================================================
 
-def get_memory(category, key):
+def get_memory(category, key, session_id="local"):
     """
     Returns one specific memory.
     """
@@ -134,8 +163,9 @@ def get_memory(category, key):
     cursor.execute("""
         SELECT value
         FROM memories
-        WHERE category=? AND memory_key=?
+        WHERE session_id=? AND category=? AND memory_key=?
     """, (
+        str(session_id),
         category,
         key,
     ))
@@ -154,7 +184,7 @@ def get_memory(category, key):
 # FORGET
 # =========================================================
 
-def forget(category, key):
+def forget(category, key, session_id="local"):
     """
     Deletes one memory.
     """
@@ -165,8 +195,9 @@ def forget(category, key):
 
     cursor.execute("""
         DELETE FROM memories
-        WHERE category=? AND memory_key=?
+        WHERE session_id=? AND category=? AND memory_key=?
     """, (
+        str(session_id),
         category,
         key,
     ))
