@@ -139,6 +139,7 @@ def create_plan(user_input, history=None):
         r"(?:please\s+)?(?:open|launch|start|search|look\s+up|lookup|find|"
         r"create|delete|read|list|move|copy|rename|calculate|compute|"
         r"explain|summarize|check|get|show|tell|give|make|also|play|write|send|download|"
+        r"(?:the\s+)?(?:time|date|weather|forecast)|"
         r"what|who|when|where|why|how)\b"
     )
     text = re.sub(
