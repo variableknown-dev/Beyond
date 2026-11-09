@@ -15,9 +15,18 @@ const main = document.querySelector(".main");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 const newChat = document.getElementById("new-chat");
+const attachImageButton = document.getElementById("attach-image");
+const imageFileInput = document.getElementById("image-file");
+const imagePreview = document.getElementById("image-preview");
+const imagePreviewThumbnail = document.getElementById("image-preview-thumbnail");
+const imageFileName = document.getElementById("image-file-name");
+const removeImageButton = document.getElementById("remove-image");
+const imageError = document.getElementById("image-error");
 
 let waiting = false;
 let activeController = null;
+let selectedImage = null;
+let imagePreviewUrl = null;
 const serviceErrorMessage = "Sorry, but we are currently experiencing a few errors in our code. We are working to resolve them promptly. We apologize for the inconvenience.";
 
 
@@ -141,6 +150,8 @@ function setWaitingState(state) {
 
     sendButton.disabled = state;
     input.disabled = state;
+    if (attachImageButton) attachImageButton.disabled = state;
+    if (removeImageButton) removeImageButton.disabled = state;
 
     if (state) {
         sendButton.setAttribute("aria-busy", "true");
@@ -148,6 +159,45 @@ function setWaitingState(state) {
         sendButton.removeAttribute("aria-busy");
     }
 }
+
+
+if (attachImageButton && imageFileInput) {
+    attachImageButton.addEventListener("click", () => imageFileInput.click());
+
+    imageFileInput.addEventListener("change", () => {
+        imageError.hidden = true;
+        imageError.textContent = "";
+        const file = imageFileInput.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+        if (!allowedTypes.includes(file.type)) {
+            imageError.textContent = "Choose a PNG, JPEG, or WebP image.";
+            imageError.hidden = false;
+            clearSelectedImage();
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            imageError.textContent = "Images must be 8 MB or smaller.";
+            imageError.hidden = false;
+            clearSelectedImage();
+            return;
+        }
+
+        clearSelectedImage();
+        imageError.hidden = true;
+        selectedImage = file;
+        imagePreviewUrl = URL.createObjectURL(file);
+        imagePreviewThumbnail.src = imagePreviewUrl;
+        imageFileName.textContent = file.name;
+        imagePreview.hidden = false;
+    });
+}
+
+removeImageButton?.addEventListener("click", () => {
+    clearSelectedImage();
+    imageError.hidden = true;
+});
 
 
 // =========================================================
@@ -206,7 +256,38 @@ async function getLocationContext(message) {
 }
 
 
-async function streamResponse(message, location) {
+function readImageAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = String(reader.result || "");
+            const comma = dataUrl.indexOf(",");
+            if (comma < 0) {
+                reject(new Error("Could not read the selected image."));
+                return;
+            }
+            resolve(dataUrl.slice(comma + 1));
+        };
+        reader.onerror = () => reject(new Error("Could not read the selected image."));
+        reader.readAsDataURL(file);
+    });
+}
+
+
+function clearSelectedImage() {
+    selectedImage = null;
+    imageFileInput.value = "";
+    imagePreview.hidden = true;
+    imagePreviewThumbnail.removeAttribute("src");
+    imageFileName.textContent = "";
+    if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+        imagePreviewUrl = null;
+    }
+}
+
+
+async function streamResponse(message, location, image) {
     activeController = new AbortController();
 
     const response = await fetch("/api/chat/stream", {
@@ -219,7 +300,8 @@ async function streamResponse(message, location) {
 
         body: JSON.stringify({
             message: message,
-            location: location
+            location: location,
+            image: image
         }),
 
         signal: activeController.signal
@@ -333,7 +415,8 @@ form.addEventListener("submit", async (event) => {
         return;
     }
 
-    const message = input.value.trim();
+    const typedMessage = input.value.trim();
+    const message = typedMessage || (selectedImage ? "Describe this image." : "");
 
     if (!message) {
         return;
@@ -344,7 +427,10 @@ form.addEventListener("submit", async (event) => {
         welcome.remove();
     }
 
-    addMessage("You", message, "user");
+    const visibleMessage = selectedImage
+        ? `${message}\n[Image attached: ${selectedImage.name}]`
+        : message;
+    addMessage("You", visibleMessage, "user");
 
     input.value = "";
     resizeInput();
@@ -355,8 +441,12 @@ form.addEventListener("submit", async (event) => {
     showTyping();
 
     try {
-        const location = await getLocationContext(message);
-        await streamResponse(message, location);
+        const location = selectedImage ? null : await getLocationContext(message);
+        const image = selectedImage
+            ? { mime_type: selectedImage.type, data: await readImageAsBase64(selectedImage) }
+            : null;
+        await streamResponse(message, location, image);
+        clearSelectedImage();
 
     } catch (error) {
         removeTyping();
@@ -366,6 +456,9 @@ form.addEventListener("submit", async (event) => {
         }
 
         console.error("Beyond streaming error:", error);
+
+        input.value = typedMessage;
+        resizeInput();
 
         addMessage(
             "Beyond",
