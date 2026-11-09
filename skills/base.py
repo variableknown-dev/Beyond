@@ -12,6 +12,7 @@ class Skill(ABC):
 
     # Capabilities required by this skill
     required_capabilities = set()
+    supports_location = False
 
     @abstractmethod
     def can_handle(self, user_input):
