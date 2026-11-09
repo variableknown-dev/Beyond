@@ -5,6 +5,7 @@ def route(
     user_input,
     platform=None,
     model_provider=None,
+    user_location=None,
 ):
     """
     Route a request to the appropriate skill.
@@ -32,6 +33,12 @@ def route(
                         f"{platform.name}."
                     )
 
+        if getattr(skill, "supports_location", False):
+            return skill.execute(
+                user_input,
+                model_provider=model_provider,
+                user_location=user_location,
+            )
         return skill.execute(user_input, model_provider=model_provider)
 
     return None
