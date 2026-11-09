@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from brain.context import clear as clear_conversation
 from core.beyond import Beyond
@@ -115,8 +116,41 @@ beyond = Beyond(
 # REQUEST MODEL
 # =========================================================
 
+class LocationContext(BaseModel):
+    latitude: float | None = None
+    longitude: float | None = None
+    timezone: str | None = None
+
+    @field_validator("latitude")
+    @classmethod
+    def validate_latitude(cls, value):
+        if value is not None and not -90 <= value <= 90:
+            raise ValueError("Invalid latitude")
+        return value
+
+    @field_validator("longitude")
+    @classmethod
+    def validate_longitude(cls, value):
+        if value is not None and not -180 <= value <= 180:
+            raise ValueError("Invalid longitude")
+        return value
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value):
+        if value:
+            if len(value) > 64:
+                raise ValueError("Invalid timezone")
+            try:
+                ZoneInfo(value)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise ValueError("Invalid timezone")
+        return value
+
+
 class ChatRequest(BaseModel):
     message: str
+    location: LocationContext | None = None
 
 
 # =========================================================
@@ -163,6 +197,7 @@ def chat(chat_request: ChatRequest, request: Request):
         response = beyond.chat(
             message,
             session_id=request.state.session_id,
+            user_location=chat_request.location.model_dump(exclude_none=True) if chat_request.location else None,
         )
 
         return ChatResponse(
@@ -213,6 +248,7 @@ async def chat_stream(chat_request: ChatRequest, request: Request):
             for chunk in beyond.chat_stream(
                 message,
                 session_id=session_id,
+                user_location=chat_request.location.model_dump(exclude_none=True) if chat_request.location else None,
             ):
 
                 if chunk:
