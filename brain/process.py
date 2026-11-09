@@ -15,11 +15,13 @@ def process(
     user_input,
     platform=None,
     model_provider=None,
+    session_id=None,
 ):
 
     add_message(
         "user",
         user_input,
+        session_id=session_id,
     )
 
     # -----------------------------------------------------
@@ -36,6 +38,7 @@ def process(
             memory["category"],
             memory["key"],
             memory["value"],
+            session_id=session_id or "local",
         )
 
     # -----------------------------------------------------
@@ -44,7 +47,7 @@ def process(
 
     plan = create_plan(
         user_input,
-        history=get_messages(),
+        history=get_messages(session_id=session_id),
     )
 
     reply = execute_plan(
@@ -58,6 +61,7 @@ def process(
         add_message(
             "assistant",
             reply,
+            session_id=session_id,
         )
 
         return reply
@@ -67,7 +71,7 @@ def process(
     # -----------------------------------------------------
 
     reply = ask_beyond(
-        get_messages(),
+        get_messages(session_id=session_id),
         model_provider=model_provider,
     )
 
@@ -77,6 +81,7 @@ def process(
     add_message(
         "assistant",
         reply,
+        session_id=session_id,
     )
 
     return reply
@@ -90,11 +95,13 @@ def process_stream(
     user_input,
     platform=None,
     model_provider=None,
+    session_id=None,
 ):
 
     add_message(
         "user",
         user_input,
+        session_id=session_id,
     )
 
     # -----------------------------------------------------
@@ -111,6 +118,7 @@ def process_stream(
             memory["category"],
             memory["key"],
             memory["value"],
+            session_id=session_id or "local",
         )
 
     # -----------------------------------------------------
@@ -119,7 +127,7 @@ def process_stream(
 
     plan = create_plan(
         user_input,
-        history=get_messages(),
+        history=get_messages(session_id=session_id),
     )
 
     reply = execute_plan(
@@ -133,6 +141,7 @@ def process_stream(
         add_message(
             "assistant",
             reply,
+            session_id=session_id,
         )
 
         yield reply
@@ -148,7 +157,7 @@ def process_stream(
     try:
 
         for chunk in stream_beyond(
-            get_messages(),
+            get_messages(session_id=session_id),
             model_provider=model_provider,
         ):
 
@@ -187,4 +196,5 @@ def process_stream(
         add_message(
             "assistant",
             "".join(response_chunks),
+            session_id=session_id,
         )
