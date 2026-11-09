@@ -7,6 +7,7 @@ def execute_plan(
     platform=None,
     model_provider=None,
     user_location=None,
+    original_request=None,
 ):
     """
     Execute each task in order.
@@ -42,9 +43,11 @@ def execute_plan(
                     [{
                         "role": "user",
                         "content": (
-                            "Answer only this part of the user's multi-part request. "
-                            "Do not repeat or answer the other parts:\n"
-                            f"{task.text}"
+                            "Answer the general-knowledge part below directly and substantively. "
+                            "Do not greet the user or answer the live-data parts. "
+                            "Use the full request only as context; answer only the specified part.\n\n"
+                            f"Full request: {original_request or task.text}\n"
+                            f"Part to answer: {task.text}"
                         ),
                     }],
                     model_provider=model_provider,
