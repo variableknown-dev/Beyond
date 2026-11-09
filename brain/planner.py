@@ -16,7 +16,8 @@ def _normalize_compound_fragment(fragment):
 
 
 def _is_skill_request(text, skills):
-    return any(skill.can_handle(text) for skill in skills)
+    skill_instances = skills.values() if isinstance(skills, dict) else skills
+    return any(skill.can_handle(text) for skill in skill_instances)
 
 
 def _weather_location_followup(user_input, history):
