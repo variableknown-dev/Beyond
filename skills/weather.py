@@ -35,6 +35,17 @@ class WeatherSkill(Skill):
         return location.strip(" ,") or None
 
     def execute(self, user_input, model_provider=None):
+        if re.search(
+            r"\b(?:yesterday|last\s+(?:week|month|year)|historical|past\s+weather)\b",
+            user_input,
+            re.I,
+        ):
+            return (
+                "I can provide current conditions and forecasts, but historical weather "
+                "isn't available in this setup. I can't verify what the weather was "
+                "on that past date."
+            )
+
         location = self._location(user_input)
         if not location:
             return "Which city or place should I check the weather for?"
