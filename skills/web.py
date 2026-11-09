@@ -3,6 +3,7 @@ import re
 from skills.base import Skill
 from tools.web import search_web
 from brain.chat import ask_beyond
+from tools.weather import WeatherAPIConfigurationError, geocode_coordinates
 
 
 class WebSkill(Skill):
@@ -12,6 +13,9 @@ class WebSkill(Skill):
     description = "Searches the web and summarizes results."
 
     required_capabilities = set()
+    supports_location = True
+
+    LOCAL_CUES = ("near me", "around me", "in my area", "local news", "nearby news")
 
     FRESHNESS_CUES = (
         "current ",
@@ -124,7 +128,7 @@ class WebSkill(Skill):
 
         command = user_input.lower().strip()
 
-        # The dedicated Weather skill handles weather requests.
+        # Weather has its own live-data skill and should be routed there.
         if any(term in command for term in ("weather", "forecast")):
             return False
 
@@ -141,7 +145,7 @@ class WebSkill(Skill):
             or (has_freshness_cue and asks_for_live_data)
         )
 
-    def execute(self, user_input, model_provider=None):
+    def execute(self, user_input, model_provider=None, user_location=None):
 
         command = user_input.lower()
         search_queries = [user_input]
@@ -149,6 +153,27 @@ class WebSkill(Skill):
             any(cue in command for cue in self.CURRENT_AFFAIRS_CUES)
             or any(term in command for term in self.RECENT_EVENT_TERMS)
         )
+
+        if any(cue in command for cue in self.LOCAL_CUES):
+            explicit_place = re.search(r"\b(?:in|at|near)\s+([^?.!,;]+)", command)
+            explicit_place = explicit_place and not re.fullmatch(
+                r"(?:here|me|my\s+(?:location|area))", explicit_place.group(1).strip(), re.I
+            )
+            if explicit_place:
+                pass
+            elif user_location and user_location.get("latitude") is not None and user_location.get("longitude") is not None:
+                try:
+                    place = geocode_coordinates(user_location["latitude"], user_location["longitude"])
+                except WeatherAPIConfigurationError:
+                    place = None
+                except Exception:
+                    place = None
+                if not place or not place.get("name"):
+                    return "I couldn't determine your area. Please include a city in your local news request."
+                region = ", ".join(part for part in (place["name"], place.get("admin1"), place.get("country")) if part)
+                search_queries = [f"{query} {region}" for query in search_queries]
+            else:
+                return "To search local news, allow one-time location access or include a city in your request."
 
         if any(cue in command for cue in self.CURRENT_AFFAIRS_CUES):
             between_entities = re.search(
