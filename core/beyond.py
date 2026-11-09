@@ -53,6 +53,7 @@ class Beyond:
         self,
         user_input: str,
         session_id=None,
+        user_location=None,
     ) -> str:
         """
         Send a message and receive the complete response.
@@ -69,6 +70,7 @@ class Beyond:
             platform=self.platform,
             model_provider=self.model_provider,
             session_id=session_id,
+            user_location=user_location,
         )
 
     # =========================================================
@@ -79,6 +81,7 @@ class Beyond:
         self,
         user_input: str,
         session_id=None,
+        user_location=None,
     ):
         """
         Send a message and stream the response.
@@ -95,4 +98,5 @@ class Beyond:
             platform=self.platform,
             model_provider=self.model_provider,
             session_id=session_id,
+            user_location=user_location,
         )
