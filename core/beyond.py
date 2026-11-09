@@ -52,6 +52,7 @@ class Beyond:
     def chat(
         self,
         user_input: str,
+        session_id=None,
     ) -> str:
         """
         Send a message and receive the complete response.
@@ -67,6 +68,7 @@ class Beyond:
             user_input,
             platform=self.platform,
             model_provider=self.model_provider,
+            session_id=session_id,
         )
 
     # =========================================================
@@ -76,6 +78,7 @@ class Beyond:
     def chat_stream(
         self,
         user_input: str,
+        session_id=None,
     ):
         """
         Send a message and stream the response.
@@ -91,4 +94,5 @@ class Beyond:
             user_input,
             platform=self.platform,
             model_provider=self.model_provider,
+            session_id=session_id,
         )
