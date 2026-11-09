@@ -6,6 +6,7 @@ def execute_plan(
     tasks,
     platform=None,
     model_provider=None,
+    user_location=None,
 ):
     """
     Execute each task in order.
@@ -29,6 +30,7 @@ def execute_plan(
             task.text,
             platform=platform,
             model_provider=model_provider,
+            user_location=user_location,
         )
 
         if reply is None:
