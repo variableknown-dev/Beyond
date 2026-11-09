@@ -17,7 +17,18 @@ def process(
     model_provider=None,
     session_id=None,
     user_location=None,
+    image_data=None,
+    image_mime_type=None,
 ):
+
+    if image_data is not None:
+        return process_image(
+            user_input,
+            image_data,
+            image_mime_type,
+            model_provider=model_provider,
+            session_id=session_id,
+        )
 
     add_message(
         "user",
@@ -100,7 +111,20 @@ def process_stream(
     model_provider=None,
     session_id=None,
     user_location=None,
+    image_data=None,
+    image_mime_type=None,
 ):
+
+    if image_data is not None:
+        reply = process_image(
+            user_input,
+            image_data,
+            image_mime_type,
+            model_provider=model_provider,
+            session_id=session_id,
+        )
+        yield reply
+        return
 
     add_message(
         "user",
@@ -204,3 +228,31 @@ def process_stream(
             "".join(response_chunks),
             session_id=session_id,
         )
+
+
+def process_image(
+    user_input,
+    image_data,
+    image_mime_type,
+    model_provider=None,
+    session_id=None,
+):
+    """Analyze a request image without persisting the image bytes."""
+
+    add_message("user", user_input, session_id=session_id)
+    messages = get_messages(session_id=session_id)
+
+    if not model_provider or not hasattr(model_provider, "chat_with_image"):
+        reply = "Image understanding isn't available for the configured model."
+    else:
+        reply = model_provider.chat_with_image(
+            messages,
+            image_data,
+            image_mime_type,
+        )
+
+    if not reply:
+        reply = "Sorry, I couldn't analyze that image. Please try again."
+
+    add_message("assistant", reply, session_id=session_id)
+    return reply
