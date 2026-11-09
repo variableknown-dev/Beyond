@@ -75,9 +75,7 @@ class GeminiProvider(ModelProvider):
             ),
         )
 
-    def chat(self, messages):
-        contents = self._build_contents(messages)
-
+    def _generate_from_contents(self, contents):
         if not contents:
             return ""
 
@@ -115,6 +113,27 @@ class GeminiProvider(ModelProvider):
         raise RuntimeError(
             f"Gemini request failed after retries: {last_error}"
         ) from last_error
+
+    def chat(self, messages):
+        return self._generate_from_contents(self._build_contents(messages))
+
+    def chat_with_image(self, messages, image_data, mime_type):
+        """Answer the latest user turn with an in-memory image attachment."""
+        if not messages or messages[-1].get("role") != "user":
+            raise ValueError("An image must be attached to the latest user message.")
+
+        latest_text = messages[-1].get("content", "Describe this image.")
+        contents = self._build_contents(messages[:-1])
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=latest_text),
+                    types.Part.from_bytes(data=image_data, mime_type=mime_type),
+                ],
+            )
+        )
+        return self._generate_from_contents(contents)
 
     def chat_stream(self, messages):
         contents = self._build_contents(messages)
