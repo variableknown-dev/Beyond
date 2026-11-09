@@ -62,11 +62,20 @@ button { cursor: pointer; }
 .composer:focus-within { border-color: #7464c2; box-shadow: 0 0 0 3px #9a87f51a; }
 .composer textarea { width: 100%; min-height: 28px; max-height: 160px; resize: none; border: 0; outline: 0; background: transparent; line-height: 1.5; }
 .composer textarea::placeholder { color: #777f90; }
+#attach-image { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: #c3b8ff; font-size: 23px; line-height: 1; }
+#attach-image:disabled, #remove-image:disabled { cursor: wait; opacity: .55; }
 #send-button { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-size: 21px; line-height: 1; transition: opacity .15s ease, transform .15s ease; }
 #send-button:hover:not(:disabled) { transform: translateY(-1px); }
 #send-button:disabled { cursor: wait; opacity: .55; }
 .composer-note { padding-top: 9px; text-align: center; font-size: 11px; }
 .composer-note.location-note { padding-top: 3px; font-size: 10px; }
+.composer-note.image-note { padding-top: 3px; font-size: 10px; }
+.image-preview { display: flex; align-items: center; gap: 10px; margin: 0 2px 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.image-preview[hidden], .image-error[hidden] { display: none; }
+#image-preview-thumbnail { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 8px; object-fit: cover; }
+#image-file-name { min-width: 0; flex: 1; overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+#remove-image { width: 32px; height: 32px; border: 0; border-radius: 9px; background: var(--surface-hover); font-size: 21px; line-height: 1; }
+.image-error { padding: 6px 0; color: #ffb4b4; text-align: center; font-size: 12px; }
 button:focus-visible, textarea:focus-visible { outline: 2px solid #b5a9ff; outline-offset: 2px; }
 @media (max-width: 700px) {
     .sidebar { position: fixed; inset: 0 auto 0 0; width: 270px; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 18px 0 40px #0005; }
