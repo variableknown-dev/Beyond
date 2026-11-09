@@ -15,7 +15,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/style.css?v=4"
+        href="/static/style.css?v=5"
     >
 </head>
 
@@ -166,6 +166,9 @@
                 class="composer"
             >
 
+                <button id="attach-image" type="button" aria-label="Attach an image" title="Attach an image">＋</button>
+                <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+
                 <textarea
                     id="message"
                     rows="1"
@@ -183,11 +186,18 @@
 
             </form>
 
+            <div id="image-preview" class="image-preview" hidden aria-live="polite">
+                <img id="image-preview-thumbnail" alt="Selected image preview">
+                <span id="image-file-name"></span>
+                <button id="remove-image" type="button" aria-label="Remove image">×</button>
+            </div>
+            <div id="image-error" class="image-error" role="alert" hidden></div>
+
             <div class="composer-note">
                 Beyond can make mistakes. Check important information.
             </div>
-            <div class="composer-note location-note">
-                Local weather or nearby news may ask for one-time location access. Location is sent to Beyond and relevant data providers for that request; Beyond does not add coordinates to chat history. You can deny access or enter a city.
+            <div class="composer-note image-note">
+                Images are processed by Google Gemini and not saved by Beyond. Google’s free tier may use submitted content to improve its products; avoid uploading sensitive images.
             </div>
 
         </div>
@@ -197,7 +207,7 @@
 </div>
 
 
-<script src="/static/app.js?v=5"></script>
+<script src="/static/app.js?v=6"></script>
 
 </body>
 
