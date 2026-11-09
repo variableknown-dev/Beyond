@@ -124,7 +124,7 @@ def create_plan(user_input, history=None):
         user_input = followup
 
     text = re.sub(
-        r"^\s*(?:hi|hey|ok|okay)[, ]+",
+        r"^\s*(?:(?:hi|hey|hello)(?:\s+beyond)?|beyond|ok|okay)[, ]+",
         "",
         user_input,
         flags=re.IGNORECASE,
