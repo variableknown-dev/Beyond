@@ -8,6 +8,7 @@ class WeatherSkill(Skill):
     name = "Weather"
     description = "Reports current weather and short forecasts for locations worldwide."
     required_capabilities = set()
+    supports_location = True
 
     WEATHER_CUES = (
         "weather", "forecast", "temperature", "how hot", "how cold",
@@ -23,6 +24,8 @@ class WeatherSkill(Skill):
         if not match:
             return None
         location = match.group(1).strip(" \t\n'\"")
+        if re.fullmatch(r"(?:my\s+)?(?:location|area)|here|near\s+me", location, re.I):
+            return None
         location = re.sub(
             r"\b(?:right now|today|tomorrow|this week|this weekend)\b",
             "", location, flags=re.I,
@@ -34,7 +37,7 @@ class WeatherSkill(Skill):
         location = re.sub(r"\b(?:celsius|fahrenheit|centigrade)\b", "", location, flags=re.I)
         return location.strip(" ,") or None
 
-    def execute(self, user_input, model_provider=None):
+    def execute(self, user_input, model_provider=None, user_location=None):
         if re.search(
             r"\b(?:yesterday|last\s+(?:week|month|year)|historical|past\s+weather)\b",
             user_input,
@@ -47,6 +50,8 @@ class WeatherSkill(Skill):
             )
 
         location = self._location(user_input)
+        if not location and user_location and user_location.get("latitude") is not None and user_location.get("longitude") is not None:
+            location = f"{user_location['latitude']},{user_location['longitude']}"
         if not location:
             return "Which city or place should I check the weather for?"
 
