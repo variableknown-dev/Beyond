@@ -55,7 +55,8 @@ def _weather_location_followup(user_input, history):
         re.I,
     )
     if asked_for_place and asked_about_weather:
-        return f"weather in {location}"
+        original_request = previous_user.get("content", "").strip().rstrip("?.!,; ")
+        return f"{original_request} in {location}"
 
     return None
 
