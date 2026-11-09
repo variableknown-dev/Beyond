@@ -14,7 +14,7 @@ Beyond is actively being developed. Answers can be incomplete or incorrect, so v
 
 ## Project status
 
-Beyond is an early-stage project. Some features depend on external services and may be unavailable at times. Historical weather lookup is not currently supported.
+Beyond is still under development and is currently not full furnished. I hope to continue growing and developing this project, please leave suggestions if any. 
 
 ## License
 
