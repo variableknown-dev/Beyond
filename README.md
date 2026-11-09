@@ -14,7 +14,8 @@ Beyond is actively being developed. Answers can be incomplete or incorrect, so v
 
 ## Project status
 
-Beyond is still under development and is currently not full furnished. I hope to continue growing and developing this project, please leave suggestions if any. 
+Beyond is an early-stage project and is actively being developed. Some features depend on external services and may be unavailable at times. Historical weather lookup is not currently supported.
+Suggestions and contributions are welcome.
 
 ## License
 
