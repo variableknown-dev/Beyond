@@ -20,8 +20,8 @@ button { cursor: pointer; }
 .app { display: flex; width: 100%; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
 .sidebar { z-index: 2; display: flex; flex: 0 0 260px; flex-direction: column; gap: 24px; padding: 24px 16px 18px; background: var(--sidebar); border-right: 1px solid var(--border); }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
-.brand-mark, .welcome-icon { display: grid; place-items: center; color: white; background: linear-gradient(145deg, #a795ff, #6552c8); box-shadow: 0 8px 24px #7562d533; font-weight: 700; }
-.brand-mark { width: 40px; height: 40px; border-radius: 14px; font-size: 19px; }
+.brand-mark, .welcome-icon { display: block; flex: none; object-fit: contain; }
+.brand-mark { width: 44px; height: 44px; border-radius: 50%; }
 .brand-name { font-size: 16px; font-weight: 650; letter-spacing: .01em; }
 .brand-subtitle, .sidebar-label, .composer-note { color: var(--muted); font-size: 12px; }
 .new-chat { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-align: left; transition: background .15s ease, border-color .15s ease; }
@@ -39,7 +39,7 @@ button { cursor: pointer; }
 .menu-button { display: none; width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .chat { display: flex; flex: 1; flex-direction: column; gap: 22px; overflow-y: auto; padding: 32px max(24px, calc((100% - 760px) / 2)); scroll-behavior: smooth; }
 .welcome { width: min(100%, 620px); margin: auto; padding: 28px 0 50px; text-align: center; }
-.welcome-icon { width: 58px; height: 58px; margin: 0 auto 22px; border-radius: 20px; font-size: 25px; }
+.welcome-icon { width: 76px; height: 76px; margin: 0 auto 22px; border-radius: 50%; }
 .welcome h1 { margin: 0 0 9px; font-size: clamp(25px, 4vw, 34px); letter-spacing: -.04em; }
 .welcome p { margin: 0; color: var(--muted); }
 .suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 26px; }
