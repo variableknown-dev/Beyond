@@ -54,6 +54,8 @@ class Beyond:
         user_input: str,
         session_id=None,
         user_location=None,
+        image_data=None,
+        image_mime_type=None,
     ) -> str:
         """
         Send a message and receive the complete response.
@@ -71,6 +73,8 @@ class Beyond:
             model_provider=self.model_provider,
             session_id=session_id,
             user_location=user_location,
+            image_data=image_data,
+            image_mime_type=image_mime_type,
         )
 
     # =========================================================
@@ -82,6 +86,8 @@ class Beyond:
         user_input: str,
         session_id=None,
         user_location=None,
+        image_data=None,
+        image_mime_type=None,
     ):
         """
         Send a message and stream the response.
@@ -99,4 +105,6 @@ class Beyond:
             model_provider=self.model_provider,
             session_id=session_id,
             user_location=user_location,
+            image_data=image_data,
+            image_mime_type=image_mime_type,
         )
