@@ -16,6 +16,7 @@ def process(
     platform=None,
     model_provider=None,
     session_id=None,
+    user_location=None,
 ):
 
     add_message(
@@ -54,6 +55,7 @@ def process(
         plan,
         platform=platform,
         model_provider=model_provider,
+        user_location=user_location,
     )
 
     if reply and reply.strip():
@@ -96,6 +98,7 @@ def process_stream(
     platform=None,
     model_provider=None,
     session_id=None,
+    user_location=None,
 ):
 
     add_message(
@@ -134,6 +137,7 @@ def process_stream(
         plan,
         platform=platform,
         model_provider=model_provider,
+        user_location=user_location,
     )
 
     if reply and reply.strip():
