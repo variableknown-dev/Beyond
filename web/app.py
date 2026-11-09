@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+import secrets
 import traceback
 
 from dotenv import load_dotenv
@@ -7,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Str
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from brain.context import clear as clear_conversation
 from core.beyond import Beyond
 from models.gemini_provider import GeminiProvider
 from web.platform import WebPlatform
@@ -46,6 +49,38 @@ app.mount(
     StaticFiles(directory=STATIC_DIR),
     name="static",
 )
+
+
+SESSION_COOKIE = "beyond_session"
+SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
+SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
+
+
+@app.middleware("http")
+async def assign_conversation_session(request: Request, call_next):
+    """Give each browser its own opaque conversation identifier."""
+
+    session_id = request.cookies.get(SESSION_COOKIE, "")
+    is_new_session = not SESSION_ID_PATTERN.fullmatch(session_id)
+    if is_new_session:
+        session_id = secrets.token_urlsafe(32)
+
+    request.state.session_id = session_id
+    response = await call_next(request)
+
+    if is_new_session:
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+        response.set_cookie(
+            key=SESSION_COOKIE,
+            value=session_id,
+            max_age=SESSION_COOKIE_MAX_AGE,
+            httponly=True,
+            secure=request.url.scheme == "https" or forwarded_proto == "https",
+            samesite="lax",
+            path="/",
+        )
+
+    return response
 
 
 @app.exception_handler(Exception)
@@ -113,9 +148,9 @@ async def home():
     "/api/chat",
     response_model=ChatResponse,
 )
-def chat(request: ChatRequest):
+def chat(chat_request: ChatRequest, request: Request):
 
-    message = request.message.strip()
+    message = chat_request.message.strip()
 
     if not message:
 
@@ -126,7 +161,8 @@ def chat(request: ChatRequest):
     try:
 
         response = beyond.chat(
-            message
+            message,
+            session_id=request.state.session_id,
         )
 
         return ChatResponse(
@@ -158,9 +194,10 @@ def chat(request: ChatRequest):
 @app.post(
     "/api/chat/stream"
 )
-async def chat_stream(request: ChatRequest):
+async def chat_stream(chat_request: ChatRequest, request: Request):
 
-    message = request.message.strip()
+    message = chat_request.message.strip()
+    session_id = request.state.session_id
 
     if not message:
 
@@ -174,7 +211,8 @@ async def chat_stream(request: ChatRequest):
         try:
 
             for chunk in beyond.chat_stream(
-                message
+                message,
+                session_id=session_id,
             ):
 
                 if chunk:
@@ -203,3 +241,11 @@ async def chat_stream(request: ChatRequest):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.post("/api/chat/reset")
+async def reset_chat(request: Request):
+    """Clear only the current browser session's conversation context."""
+
+    clear_conversation(session_id=request.state.session_id)
+    return {"status": "ok"}
