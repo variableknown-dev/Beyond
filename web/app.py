@@ -1,13 +1,15 @@
+import base64
+import binascii
 from pathlib import Path
 import re
 import secrets
 import traceback
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from brain.context import clear as clear_conversation
@@ -55,11 +57,18 @@ app.mount(
 SESSION_COOKIE = "beyond_session"
 SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_CHAT_BODY_BYTES = 12 * 1024 * 1024
 
 
 @app.middleware("http")
 async def assign_conversation_session(request: Request, call_next):
     """Give each browser its own opaque conversation identifier."""
+
+    if request.url.path in {"/api/chat", "/api/chat/stream"}:
+        content_length = request.headers.get("content-length")
+        if content_length and content_length.isdigit() and int(content_length) > MAX_CHAT_BODY_BYTES:
+            return JSONResponse({"detail": "Chat request is too large. Images must be 8 MB or smaller."}, status_code=413)
 
     session_id = request.cookies.get(SESSION_COOKIE, "")
     is_new_session = not SESSION_ID_PATTERN.fullmatch(session_id)
@@ -148,9 +157,42 @@ class LocationContext(BaseModel):
         return value
 
 
+class ImageAttachment(BaseModel):
+    mime_type: str
+    data: str = Field(min_length=1, max_length=11_184_812)
+
+
 class ChatRequest(BaseModel):
     message: str
     location: LocationContext | None = None
+    image: ImageAttachment | None = None
+
+
+def decode_image_attachment(image):
+    if image is None:
+        return None, None
+
+    supported_types = {"image/png", "image/jpeg", "image/webp"}
+    if image.mime_type not in supported_types:
+        raise HTTPException(status_code=415, detail="Use a PNG, JPEG, or WebP image.")
+
+    try:
+        image_bytes = base64.b64decode(image.data, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="The image upload is invalid.")
+
+    if not image_bytes or len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Images must be 8 MB or smaller.")
+
+    signatures = {
+        "image/png": image_bytes.startswith(b"\x89PNG\r\n\x1a\n"),
+        "image/jpeg": image_bytes.startswith(b"\xff\xd8\xff"),
+        "image/webp": image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP",
+    }
+    if not signatures[image.mime_type]:
+        raise HTTPException(status_code=415, detail="The file content does not match its image type.")
+
+    return image_bytes, image.mime_type
 
 
 # =========================================================
@@ -185,6 +227,10 @@ async def home():
 def chat(chat_request: ChatRequest, request: Request):
 
     message = chat_request.message.strip()
+    image_bytes, image_mime_type = decode_image_attachment(chat_request.image)
+
+    if not message and image_bytes:
+        message = "Describe this image."
 
     if not message:
 
@@ -198,6 +244,8 @@ def chat(chat_request: ChatRequest, request: Request):
             message,
             session_id=request.state.session_id,
             user_location=chat_request.location.model_dump(exclude_none=True) if chat_request.location else None,
+            image_data=image_bytes,
+            image_mime_type=image_mime_type,
         )
 
         return ChatResponse(
@@ -233,6 +281,10 @@ async def chat_stream(chat_request: ChatRequest, request: Request):
 
     message = chat_request.message.strip()
     session_id = request.state.session_id
+    image_bytes, image_mime_type = decode_image_attachment(chat_request.image)
+
+    if not message and image_bytes:
+        message = "Describe this image."
 
     if not message:
 
@@ -249,6 +301,8 @@ async def chat_stream(chat_request: ChatRequest, request: Request):
                 message,
                 session_id=session_id,
                 user_location=chat_request.location.model_dump(exclude_none=True) if chat_request.location else None,
+                image_data=image_bytes,
+                image_mime_type=image_mime_type,
             ):
 
                 if chunk:
