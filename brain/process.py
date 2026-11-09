@@ -56,6 +56,7 @@ def process(
         platform=platform,
         model_provider=model_provider,
         user_location=user_location,
+        original_request=user_input,
     )
 
     if reply and reply.strip():
@@ -138,6 +139,7 @@ def process_stream(
         platform=platform,
         model_provider=model_provider,
         user_location=user_location,
+        original_request=user_input,
     )
 
     if reply and reply.strip():
