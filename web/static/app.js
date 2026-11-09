@@ -373,7 +373,18 @@ document.addEventListener("click", (event) => {
 // =========================================================
 
 if (newChat) {
-    newChat.addEventListener("click", () => {
+    newChat.addEventListener("click", async () => {
+        newChat.disabled = true;
+
+        try {
+            await fetch("/api/chat/reset", {
+                method: "POST",
+                credentials: "same-origin"
+            });
+        } catch (error) {
+            console.error("Beyond chat reset error:", error);
+        }
+
         window.location.reload();
     });
 }
