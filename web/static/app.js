@@ -154,7 +154,59 @@ function setWaitingState(state) {
 // STREAM RESPONSE
 // =========================================================
 
-async function streamResponse(message) {
+function hasExplicitPlace(message) {
+    const match = message.match(/\b(?:in|at|for|near)\s+([^,?.!]+)/i);
+    if (!match) return false;
+    const place = match[1].trim().toLowerCase();
+    return !/^(?:here|there|me|my\s+(?:location|area)|tomorrow|today|tonight|this\s+week|next\s+few\s+days|celsius|fahrenheit)$/.test(place);
+}
+
+
+function needsLocalTime(message) {
+    return /\b(?:time|date|today|tomorrow)\b/i.test(message);
+}
+
+
+function needsCoordinates(message) {
+    const text = message.toLowerCase();
+    const weather = /\b(?:weather|forecast|temperature|rain|snow|humidity|wind)\b/.test(text)
+        && !/\b(?:yesterday|last\s+(?:week|month|year)|historical|past\s+weather)\b/.test(text);
+    const nearby = /\b(?:near me|around me|in my area|local news|nearby news)\b/.test(text);
+    return (weather || nearby) && !hasExplicitPlace(message);
+}
+
+
+async function getLocationContext(message) {
+    const location = {};
+    if (needsLocalTime(message)) {
+        try {
+            location.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        } catch (error) {
+            console.warn("Could not read browser timezone:", error);
+        }
+    }
+
+    if (needsCoordinates(message) && navigator.geolocation) {
+        try {
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: false,
+                    timeout: 8000,
+                    maximumAge: 120000
+                });
+            });
+            location.latitude = position.coords.latitude;
+            location.longitude = position.coords.longitude;
+        } catch (error) {
+            // The user can deny permission; the server will then ask for a city.
+        }
+    }
+
+    return Object.keys(location).length ? location : null;
+}
+
+
+async function streamResponse(message, location) {
     activeController = new AbortController();
 
     const response = await fetch("/api/chat/stream", {
@@ -166,7 +218,8 @@ async function streamResponse(message) {
         },
 
         body: JSON.stringify({
-            message: message
+            message: message,
+            location: location
         }),
 
         signal: activeController.signal
@@ -302,7 +355,8 @@ form.addEventListener("submit", async (event) => {
     showTyping();
 
     try {
-        await streamResponse(message);
+        const location = await getLocationContext(message);
+        await streamResponse(message, location);
 
     } catch (error) {
         removeTyping();
