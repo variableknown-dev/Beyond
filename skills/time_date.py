@@ -11,12 +11,14 @@ class TimeDateSkill(Skill):
     name = "Time and date"
     description = "Gives the current time and date in a timezone or location."
     required_capabilities = set()
+    supports_location = True
 
     WEATHER_TERMS = ("weather", "forecast", "rain", "snow", "temperature", "wind")
     TIME_CUES = (
         "what time", "what is the time", "what's the time", "whats the time",
         "tell me the time", "current time", "time right now", "time is it",
         "time in ", "time at ", "local time",
+        "time here", "time in my location", "time in my area",
     )
     DATE_CUES = (
         "what date", "what is the date", "what's the date", "whats the date",
@@ -31,7 +33,7 @@ class TimeDateSkill(Skill):
         return any(cue in text for cue in self.TIME_CUES + self.DATE_CUES)
 
     @staticmethod
-    def _zone_for(text):
+    def _zone_for(text, user_location=None):
         # An explicit IANA timezone is the most precise, e.g. Asia/Tokyo.
         zone_match = re.search(r"\b[A-Z][A-Za-z_+-]+/[A-Za-z0-9_+./-]+\b", text)
         if zone_match:
@@ -42,24 +44,31 @@ class TimeDateSkill(Skill):
             from tools.weather import geocode_location
 
             place_name = place_match.group(1).strip(" \t\n'\"")
-            place_name = re.sub(r"\b(?:right now|today|currently)\b", "", place_name, flags=re.I).strip(" ,")
-            if not place_name:
-                raise ValueError("Please provide a city or timezone.")
-            place = geocode_location(place_name)
-            if place is None:
-                raise ValueError(f"I couldn't find a timezone for {place_name!r}.")
-            timezone = place["timezone"]
-            return ZoneInfo(timezone), f"{place['name']}, {place['country']} ({timezone})"
+            if re.fullmatch(r"(?:my\s+)?(?:location|area)|here", place_name, re.I):
+                place_match = None
+            else:
+                place_name = re.sub(r"\b(?:right now|today|currently)\b", "", place_name, flags=re.I).strip(" ,")
+                if not place_name:
+                    raise ValueError("Please provide a city or timezone.")
+                place = geocode_location(place_name)
+                if place is None:
+                    raise ValueError(f"I couldn't find a timezone for {place_name!r}.")
+                timezone = place["timezone"]
+                return ZoneInfo(timezone), f"{place['name']}, {place['country']} ({timezone})"
+
+        if user_location and user_location.get("timezone"):
+            timezone = user_location["timezone"]
+            return ZoneInfo(timezone), timezone
 
         timezone = os.getenv("BEYOND_DEFAULT_TIMEZONE", "Asia/Kolkata")
         return ZoneInfo(timezone), timezone
 
-    def execute(self, user_input, model_provider=None):
+    def execute(self, user_input, model_provider=None, user_location=None):
         text = user_input.lower()
         asks_time = any(cue in text for cue in self.TIME_CUES)
         asks_date = any(cue in text for cue in self.DATE_CUES)
         try:
-            zone, label = self._zone_for(user_input)
+            zone, label = self._zone_for(user_input, user_location=user_location)
         except WeatherAPIConfigurationError as error:
             return str(error)
         except ValueError:
