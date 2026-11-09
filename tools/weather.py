@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 import os
+import re
 import threading
 import time
 
@@ -52,15 +53,37 @@ def geocode_location(location):
     }
 
 
+def geocode_coordinates(latitude, longitude):
+    """Resolve browser-supplied coordinates without caching the lookup."""
+    response = httpx.get(
+        f"{BASE_URL}/search.json",
+        params={"key": _api_key(), "q": f"{latitude},{longitude}"},
+        timeout=10.0,
+    )
+    response.raise_for_status()
+    results = response.json()
+    if not results:
+        return None
+    place = results[0]
+    return {
+        "name": place.get("name", ""),
+        "admin1": place.get("region", ""),
+        "country": place.get("country", ""),
+    }
+
+
 def get_weather(location, temperature_unit="celsius", include_forecast=False):
     """Return current conditions and, optionally, a three-day forecast."""
 
     cache_key = (location.strip().lower(), temperature_unit, include_forecast)
     now = time.monotonic()
-    with _WEATHER_CACHE_LOCK:
-        cached = _WEATHER_CACHE.get(cache_key)
-        if cached and now - cached[0] < _WEATHER_CACHE_SECONDS:
-            return cached[1]
+    # Browser coordinates are deliberately never retained in the server cache.
+    is_coordinates = bool(re.fullmatch(r"\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?\s*", location))
+    if not is_coordinates:
+        with _WEATHER_CACHE_LOCK:
+            cached = _WEATHER_CACHE.get(cache_key)
+            if cached and now - cached[0] < _WEATHER_CACHE_SECONDS:
+                return cached[1]
 
     endpoint = "forecast.json" if include_forecast else "current.json"
     params = {
@@ -88,6 +111,7 @@ def get_weather(location, temperature_unit="celsius", include_forecast=False):
         "temperature_unit": temperature_unit,
     }
 
-    with _WEATHER_CACHE_LOCK:
-        _WEATHER_CACHE[cache_key] = (time.monotonic(), weather)
+    if not is_coordinates:
+        with _WEATHER_CACHE_LOCK:
+            _WEATHER_CACHE[cache_key] = (time.monotonic(), weather)
     return weather
